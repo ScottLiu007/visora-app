@@ -1,0 +1,275 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase'
+import { getReport, scoreColor, scoreLabel, type ScanReport } from '@/lib/api'
+import { formatDate } from '@/lib/utils'
+import { ArrowLeft, ExternalLink, AlertTriangle, TrendingUp, Loader2, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Zap, Shield, Flame } from 'lucide-react'
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
+
+// ── Score Ring ───────────────────────────────────────────────────────────────
+function ScoreRing({ score }: { score: number }) {
+  const color = scoreColor(score)
+  const label = scoreLabel(score)
+  const r = 56; const sw = 9
+  const circ = 2 * Math.PI * r
+  const offset = circ * (1 - score / 100)
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{width:130,height:130}}>
+      <svg width={130} height={130} viewBox="0 0 130 130" style={{transform:'rotate(-90deg)'}}>
+        <circle cx={65} cy={65} r={r} fill="none" stroke="rgba(34,211,238,0.08)" strokeWidth={sw}/>
+        <circle cx={65} cy={65} r={r} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round"
+          strokeDasharray={circ} strokeDashoffset={offset}
+          style={{transition:'stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)',filter:`drop-shadow(0 0 6px ${color}66)`}}/>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold font-mono text-white leading-none">{score}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-widest mt-0.5" style={{color}}>{label}</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Radar Chart ──────────────────────────────────────────────────────────────
+function ScoreRadar({ b }: { b: ScanReport['score_breakdown'] }) {
+  const data = [
+    { label: 'Appearance', value: b.appearance_rate },
+    { label: 'Density',    value: b.citation_density },
+    { label: 'Sentiment',  value: b.sentiment },
+    { label: 'Sources',    value: b.source_quality },
+  ]
+  return (
+    <ResponsiveContainer width="100%" height={210}>
+      <RadarChart data={data} margin={{top:10,right:20,bottom:10,left:20}}>
+        <PolarGrid stroke="rgba(34,211,238,0.08)"/>
+        <PolarAngleAxis dataKey="label" tick={{fill:'#7a8fa6',fontSize:11,fontFamily:'DM Mono'}}/>
+        <Radar name="Score" dataKey="value" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.12} dot={{r:3,fill:'#22d3ee'}}/>
+      </RadarChart>
+    </ResponsiveContainer>
+  )
+}
+
+// ── Gap Bar Chart ─────────────────────────────────────────────────────────────
+function GapChart({ gaps }: { gaps: ScanReport['citation_gaps'] }) {
+  const data = gaps.map(g => ({
+    name: g.competitor,
+    gap: Math.round(g.gap_score * 100),
+    color: g.gap_score > 0.6 ? '#fb7185' : g.gap_score > 0.3 ? '#fbbf24' : '#34d399',
+  }))
+  return (
+    <ResponsiveContainer width="100%" height={180}>
+      <BarChart data={data} layout="vertical" margin={{left:0,right:16}}>
+        <XAxis type="number" domain={[0,100]} tick={{fill:'#3d5166',fontSize:10}}/>
+        <YAxis dataKey="name" type="category" tick={{fill:'#7a8fa6',fontSize:11}} width={90}/>
+        <Tooltip contentStyle={{background:'#0f1b30',border:'1px solid rgba(34,211,238,0.15)',borderRadius:10,fontSize:12}}
+          labelStyle={{color:'#f0f4f8'}} itemStyle={{color:'#7a8fa6'}} formatter={(v:number) => [`${v} gap pts`,'Gap']}/>
+        <Bar dataKey="gap" radius={[0,6,6,0]}>{data.map((d,i) => <Cell key={i} fill={d.color}/>)}</Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+// ── Code Block ────────────────────────────────────────────────────────────────
+function CodeBlock({ code, label }: { code: string; label: string }) {
+  const [copied, setCopied] = useState(false)
+  const [open, setOpen]     = useState(false)
+  function copy() { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  return (
+    <div className="border border-[rgba(34,211,238,0.1)] rounded-xl overflow-hidden">
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-4 py-3 bg-[#0f1b30] hover:bg-[#162340] transition-colors">
+        <span className="text-xs font-semibold text-[#7a8fa6] font-mono">{label}</span>
+        {open ? <ChevronUp size={14} className="text-[#3d5166]"/> : <ChevronDown size={14} className="text-[#3d5166]"/>}
+      </button>
+      {open && (
+        <div className="relative">
+          <pre className="p-4 text-[11px] font-mono text-[#7a8fa6] overflow-x-auto max-h-48 leading-relaxed">{code}</pre>
+          <button onClick={copy} className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0a1120] border border-[rgba(34,211,238,0.15)] text-[10px] text-[#7a8fa6] hover:text-cyan-400 transition-colors">
+            {copied ? <Check size={10} className="text-emerald-400"/> : <Copy size={10}/>}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function Sk({ className = '' }: { className?: string }) {
+  return <div className={`skeleton rounded-xl ${className}`}/>
+}
+
+const priorityConfig = {
+  high:   { color: 'text-rose-400',    bg: 'bg-rose-400/10 border-rose-400/20',       icon: Flame },
+  medium: { color: 'text-amber-400',   bg: 'bg-amber-400/10 border-amber-400/20',     icon: AlertTriangle },
+  low:    { color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/20', icon: Shield },
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+export default function ReportPage() {
+  const params  = useParams<{ id: string }>()
+  const router  = useRouter()
+  const supabase = createClient()
+  const [report, setReport]   = useState<ScanReport | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState<string | null>(null)
+  const [polling, setPolling] = useState(false)
+
+  const load = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/auth/login'); return }
+      const data = await getReport(params.id, session.access_token)
+      setReport(data)
+      setPolling(data.status === 'running' || data.status === 'pending')
+    } catch (e: any) { setError(e.message) }
+    finally { setLoading(false) }
+  }, [params.id])
+
+  useEffect(() => { load() }, [load])
+  useEffect(() => { if (!polling) return; const t = setInterval(load, 4000); return () => clearInterval(t) }, [polling, load])
+
+  if (loading) return (
+    <div className="p-8 max-w-5xl space-y-6">
+      <Sk className="h-8 w-48"/><div className="grid grid-cols-3 gap-4"><Sk className="h-48"/><Sk className="h-48"/><Sk className="h-48"/></div><Sk className="h-64"/>
+    </div>
+  )
+
+  if (error || !report) return (
+    <div className="p-8 max-w-xl">
+      <div className="bg-rose-400/10 border border-rose-400/20 rounded-2xl p-6 text-center">
+        <AlertTriangle size={28} className="text-rose-400 mx-auto mb-3"/>
+        <p className="text-white font-semibold mb-1">Report not found</p>
+        <p className="text-sm text-[#7a8fa6] mb-5">{error}</p>
+        <button onClick={() => router.back()} className="text-sm text-cyan-400 hover:text-cyan-300">← Go back</button>
+      </div>
+    </div>
+  )
+
+  if (report.status === 'pending' || report.status === 'running') return (
+    <div className="p-8 max-w-xl">
+      <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-[#7a8fa6] hover:text-white mb-8 transition-colors"><ArrowLeft size={14}/> Overview</Link>
+      <div className="bg-[#0a1120] border border-cyan-400/15 rounded-2xl p-10 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center mx-auto mb-6">
+          <Loader2 size={28} className="text-cyan-400 animate-spin"/>
+        </div>
+        <h2 className="font-['Syne'] text-xl font-bold text-white mb-2">Scanning…</h2>
+        <p className="text-sm text-[#7a8fa6] mb-1">Querying AI search engines for <span className="text-white">{report.target_brand}</span></p>
+        <p className="text-xs text-[#3d5166]">Takes ~60 seconds. Page auto-refreshes.</p>
+      </div>
+    </div>
+  )
+
+  const color = scoreColor(report.score)
+
+  return (
+    <div className="p-8 max-w-5xl space-y-8">
+      {/* Header */}
+      <div className="flex items-start justify-between animate-fade-up">
+        <div>
+          <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-xs text-[#7a8fa6] hover:text-white mb-3 transition-colors"><ArrowLeft size={12}/> Overview</Link>
+          <h1 className="font-['Syne'] text-2xl font-bold text-white">{report.target_brand}</h1>
+          <div className="flex items-center gap-3 mt-1">
+            <a href={report.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-[#7a8fa6] hover:text-cyan-400 transition-colors">
+              {report.website_url} <ExternalLink size={10}/>
+            </a>
+            <span className="text-[#3d5166] text-xs">·</span>
+            <span className="text-xs text-[#7a8fa6]">{formatDate(report.created_at)}</span>
+            <span className="text-xs text-[#3d5166] bg-[#0f1b30] border border-[rgba(34,211,238,0.08)] px-2 py-0.5 rounded-lg">{report.category}</span>
+          </div>
+        </div>
+        <button onClick={load} className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[rgba(34,211,238,0.15)] text-[#7a8fa6] hover:text-white text-sm transition-all">
+          <RefreshCw size={13}/> Refresh
+        </button>
+      </div>
+
+      {/* Top row: Score + Radar + Gap */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-up delay-100">
+        <div className="bg-[#0a1120] border rounded-2xl p-6 flex flex-col items-center" style={{borderColor:`${color}22`}}>
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#7a8fa6] mb-5">GEO Score</p>
+          <ScoreRing score={report.score}/>
+          <div className="mt-5 grid grid-cols-2 gap-3 w-full">
+            {([['Appearance', report.score_breakdown.appearance_rate],['Density', report.score_breakdown.citation_density],['Sentiment', report.score_breakdown.sentiment],['Sources', report.score_breakdown.source_quality]] as [string,number][]).map(([l,v]) => (
+              <div key={l} className="bg-[#0f1b30] rounded-xl p-2.5 text-center">
+                <p className="text-base font-bold font-mono text-white">{Math.round(v)}</p>
+                <p className="text-[9px] font-semibold uppercase tracking-widest text-[#7a8fa6] mt-0.5">{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-[#0a1120] border border-[rgba(34,211,238,0.1)] rounded-2xl p-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#7a8fa6] mb-2">Score Dimensions</p>
+          <ScoreRadar b={report.score_breakdown}/>
+        </div>
+        <div className="bg-[#0a1120] border border-[rgba(34,211,238,0.1)] rounded-2xl p-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#7a8fa6] mb-4">Citation Gap vs Competitors</p>
+          {report.citation_gaps.length ? <GapChart gaps={report.citation_gaps}/> : <p className="text-sm text-[#3d5166] text-center py-8">No competitors tracked</p>}
+        </div>
+      </div>
+
+      {/* Action Items */}
+      <div className="animate-fade-up delay-200">
+        <h2 className="font-['Syne'] text-base font-bold text-white mb-4 flex items-center gap-2">
+          <TrendingUp size={16} className="text-cyan-400"/> Priority Actions
+        </h2>
+        <div className="space-y-3">
+          {report.action_items.map((action, i) => {
+            const cfg = priorityConfig[action.priority]
+            const Icon = cfg.icon
+            return (
+              <div key={i} className="bg-[#0a1120] border border-[rgba(34,211,238,0.08)] hover:border-cyan-400/15 rounded-2xl p-5 transition-all">
+                <div className="flex items-start gap-4">
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-xl border flex items-center justify-center ${cfg.bg}`}>
+                    <Icon size={13} className={cfg.color}/>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-semibold text-white">{action.title}</p>
+                      <span className={`text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md border ${cfg.bg} ${cfg.color}`}>{action.priority}</span>
+                    </div>
+                    <p className="text-sm text-[#7a8fa6] leading-relaxed">{action.description}</p>
+                    {action.impact && <p className="text-xs text-cyan-400 mt-2 flex items-center gap-1"><Zap size={10}/>{action.impact}</p>}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Generated Content */}
+      {report.generated_content && Object.keys(report.generated_content).length > 0 && (
+        <div className="animate-fade-up delay-300">
+          <h2 className="font-['Syne'] text-base font-bold text-white mb-4 flex items-center gap-2">
+            <Zap size={16} className="text-cyan-400"/> Generated Content
+          </h2>
+          <div className="space-y-3">
+            {report.generated_content.faq    && <CodeBlock label="FAQ Schema (JSON-LD)"   code={report.generated_content.faq}/>}
+            {report.generated_content.schema && <CodeBlock label="Organization Schema"     code={report.generated_content.schema}/>}
+            {report.generated_content.llms_txt && <CodeBlock label="llms.txt"             code={report.generated_content.llms_txt}/>}
+          </div>
+        </div>
+      )}
+
+      {/* Competitor Sources */}
+      {report.citation_gaps.some(g => g.sources.length > 0) && (
+        <div className="animate-fade-up delay-400">
+          <h2 className="font-['Syne'] text-base font-bold text-white mb-4">Competitor Citation Sources</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {report.citation_gaps.filter(g => g.sources.length > 0).map(gap => (
+              <div key={gap.competitor} className="bg-[#0a1120] border border-[rgba(34,211,238,0.08)] rounded-xl p-4">
+                <p className="text-xs font-semibold text-white mb-2">{gap.competitor}</p>
+                <ul className="space-y-1">
+                  {gap.sources.slice(0, 5).map((src, i) => (
+                    <li key={i} className="text-xs text-[#7a8fa6] truncate font-mono">{src}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

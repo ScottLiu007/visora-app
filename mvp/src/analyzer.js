@@ -1,0 +1,153 @@
+// visora/mvp/src/analyzer.js
+// Competitor citation gap analysis
+// "Why do competitors appear while you don't?" — the core Visora value prop
+
+// ─── Citation Gap Analysis ────────────────────────────────────────────────────
+// Identifies questions where competitor appeared but target did NOT
+export function analyzeCitationGaps({ targetBrand, competitors, results }) {
+  const validResults = results.filter(r => !r.error);
+
+  const gaps = []; // questions where a competitor appeared but target didn't
+
+  for (const result of validResults) {
+    const targetMentioned = (result.mentions?.[targetBrand] || 0) > 0;
+    if (targetMentioned) continue; // no gap here
+
+    const competitorHits = competitors
+      .filter(c => (result.mentions?.[c] || 0) > 0)
+      .map(c => ({ brand: c, count: result.mentions[c] }));
+
+    if (competitorHits.length > 0) {
+      gaps.push({
+        question: result.question,
+        competitorHits,
+        sources: result.sources || [],
+      });
+    }
+  }
+
+  return gaps;
+}
+
+// ─── Source Attribution ────────────────────────────────────────────────────────
+// For each competitor, which sources are driving their citations?
+export function attributeSources({ competitors, results }) {
+  const competitorSources = {};
+
+  for (const competitor of competitors) {
+    competitorSources[competitor] = {};
+  }
+
+  for (const result of results) {
+    if (result.error || !result.sources?.length) continue;
+    for (const competitor of competitors) {
+      if ((result.mentions?.[competitor] || 0) === 0) continue;
+      for (const url of result.sources) {
+        try {
+          const domain = new URL(url).hostname.replace('www.', '');
+          competitorSources[competitor][domain] =
+            (competitorSources[competitor][domain] || 0) + 1;
+        } catch {}
+      }
+    }
+  }
+
+  // Sort each competitor's sources by frequency
+  const ranked = {};
+  for (const [competitor, domains] of Object.entries(competitorSources)) {
+    ranked[competitor] = Object.entries(domains)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+  }
+  return ranked;
+}
+
+// ─── Action Recommendations ───────────────────────────────────────────────────
+// Generate 3 concrete, prioritized actions based on gap analysis
+export function generateActions({ targetBrand, gaps, competitorSources, targetScore }) {
+  const actions = [];
+
+  // Count which domains appear most in competitor citations
+  const allCompetitorDomains = {};
+  for (const domains of Object.values(competitorSources)) {
+    for (const [domain, count] of domains) {
+      allCompetitorDomains[domain] = (allCompetitorDomains[domain] || 0) + count;
+    }
+  }
+  const topCompetitorDomains = Object.entries(allCompetitorDomains)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([d]) => d);
+
+  // Action 1: Missing platform presence
+  const REVIEW_PLATFORMS = ['g2.com', 'capterra.com', 'trustpilot.com', 'getapp.com', 'producthunt.com'];
+  const missingPlatforms = topCompetitorDomains.filter(d => REVIEW_PLATFORMS.includes(d));
+  if (missingPlatforms.length > 0) {
+    actions.push({
+      priority: 1,
+      type: 'platform',
+      title: `Get listed on ${missingPlatforms.slice(0, 2).join(' and ')}`,
+      reason: `These platforms appear in ${missingPlatforms.length === 1 ? 'competitor' : 'multiple competitor'} citations but not yours.`,
+      effort: 'Low (1-2 hours)',
+      impact: 'High — visible in 2-4 weeks',
+      url: missingPlatforms.includes('g2.com') ? 'https://www.g2.com/products/new' : null,
+    });
+  }
+
+  // Action 2: Content gaps
+  if (gaps.length > 0) {
+    const gapQuestionTypes = detectGapPatterns(gaps);
+    actions.push({
+      priority: 2,
+      type: 'content',
+      title: `Create content targeting ${gapQuestionTypes} queries`,
+      reason: `${targetBrand} missed ${gaps.length} queries where competitors appeared. These queries show a content gap.`,
+      effort: 'Medium (2-4 hours)',
+      impact: 'Medium-High — visible in 3-6 weeks',
+      sampleQuestions: gaps.slice(0, 3).map(g => g.question),
+    });
+  }
+
+  // Action 3: FAQ + Schema
+  if (targetScore < 40) {
+    actions.push({
+      priority: 3,
+      type: 'technical',
+      title: 'Add FAQPage schema markup to your website',
+      reason: 'Structured FAQ data is one of the strongest signals for AI citation. Your current score suggests this is missing or weak.',
+      effort: 'Low (1 hour)',
+      impact: 'Medium — visible in 1-2 weeks',
+    });
+  } else {
+    // If score is decent, suggest expanding schema coverage
+    actions.push({
+      priority: 3,
+      type: 'authority',
+      title: 'Build community presence in relevant Reddit communities',
+      reason: 'Reddit appears frequently in AI citation sources. Authentic participation creates citation-able brand mentions.',
+      effort: 'Ongoing (1-2 hours/week)',
+      impact: 'Medium — compounds over time',
+    });
+  }
+
+  return actions.sort((a, b) => a.priority - b.priority);
+}
+
+// ─── Gap Pattern Detector ─────────────────────────────────────────────────────
+function detectGapPatterns(gaps) {
+  const q = gaps.map(g => g.question.toLowerCase()).join(' ');
+  if (q.includes('alternative') || q.includes('vs ')) return '"alternative" and comparison';
+  if (q.includes('best') || q.includes('top')) return '"best tools" and recommendation';
+  if (q.includes('free') || q.includes('affordable')) return 'pricing and affordability';
+  if (q.includes('small') || q.includes('startup') || q.includes('indie')) return 'small team and indie';
+  return 'category-specific';
+}
+
+// ─── Full Analysis Pipeline ───────────────────────────────────────────────────
+export function runFullAnalysis({ targetBrand, competitors, results, topSources, targetScore }) {
+  const gaps = analyzeCitationGaps({ targetBrand, competitors, results });
+  const competitorSources = attributeSources({ competitors, results });
+  const actions = generateActions({ targetBrand, gaps, competitorSources, targetScore });
+
+  return { gaps, competitorSources, actions };
+}
