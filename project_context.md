@@ -1,6 +1,6 @@
 # Visora — Project Context
 > 每次开新对话时，把这个文件内容告诉 Claude，即可无缝继续工作。
-> 最后更新：2026-03-24（Session 6 完成）
+> 最后更新：2026-03-24（Session 7 完成）
 
 ---
 
@@ -162,17 +162,26 @@ visora/
 - [x] CORS 修复：mvp/.env ALLOWED_ORIGIN 从 3000 → 3002（"Failed to fetch" 消除）
 - [x] Dashboard Overview 界面正常渲染（No scans yet 空态）
 
-### ✅ 阶段四 — 代码提交 & 部署准备（已完成，2026-03-24 Session 6）
+### ✅ 阶段四 — VPS 后端上线（已完成，2026-03-24 Session 7）
+- [x] Node.js 20 + npm + pm2 安装（via nvm）
+- [x] 代码 scp 上传到 `/opt/visora/mvp`
+- [x] .env 配置（NODE_ENV=production，ALLOWED_ORIGIN=dashboard域名）
+- [x] pm2 启动 visora-api（online 状态）
+- [x] pm2 开机自启（systemd 配置完成）
+- [x] nginx 反代配置（proxy_pass → 3001，120s timeout）
+- [x] DNS A 记录：`api.visoraapp.com` → `47.85.12.236`（灰云）
+- [x] HTTPS 证书（Let's Encrypt，certbot 5.4.0，自动续期）
+- [x] 验证：`https://api.visoraapp.com/health` 返回 `{"status":"ok"}`
 - [x] GitHub 仓库创建：`ScottLiu007/visora-app`（Public）
 - [x] 代码 push：64 文件，dashboard + mvp 全部提交
 - [x] VPS 环境探查完成（root@47.85.12.236，Debian 11）
 - [x] 部署步骤文档：`tech/vps-deploy.md`（含 nginx/pm2/HTTPS/Vercel 完整步骤）
 - [x] New Scan 页面 → 触发扫描接口联调（填表单 → POST /api/scan → 报告页）✅
 ### 待完成
-- [ ] Vercel 部署 dashboard（连 GitHub，push 自动部署）
-- [ ] VPS 部署 backend：Node 20 + pm2 + nginx 反代 + HTTPS（步骤见 tech/vps-deploy.md）
-- [ ] DNS 加 A 记录：api.visoraapp.com → 47.85.12.236
-- [ ] Supabase Auth URL 加生产域名
+- [x] VPS 部署 backend：Node 20 + pm2 + nginx + HTTPS ✅ https://api.visoraapp.com
+- [ ] Vercel 部署 dashboard（连 GitHub visora-app → dashboard目录）
+- [ ] Supabase Auth URL 加生产域名 dashboard.visoraapp.com
+- [ ] dashboard .env 的 NEXT_PUBLIC_API_URL 改为 https://api.visoraapp.com
 
 ### 推广（随时可做）
 - [ ] Reddit 首帖：发 r/SEO（用 `gtm/reddit-posts.md` 帖子1，纯数据帖，不提 Visora）
