@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { getReport, scoreColor, scoreLabel, type ScanReport } from '@/lib/api'
+import { getReport, getUserReports, scoreColor, scoreLabel, type ScanReport } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { ArrowLeft, ExternalLink, AlertTriangle, TrendingUp, Loader2, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Zap, Shield, Flame, CheckCircle2, XCircle, Info } from 'lucide-react'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
@@ -111,18 +111,27 @@ export default function ReportPage() {
   const params  = useParams<{ id: string }>()
   const router  = useRouter()
   const supabase = createClient()
-  const [report, setReport]   = useState<ScanReport | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState<string | null>(null)
-  const [polling, setPolling] = useState(false)
+  const [report, setReport]         = useState<ScanReport | null>(null)
+  const [prevScore, setPrevScore]   = useState<number | null>(null)
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState<string | null>(null)
+  const [polling, setPolling]       = useState(false)
 
   const load = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/auth/login'); return }
-      const data = await getReport(params.id, session.access_token)
+      const [data, allScans] = await Promise.all([
+        getReport(params.id, session.access_token),
+        getUserReports(session.user.id, session.access_token),
+      ])
       setReport(data)
       setPolling(data.status === 'running' || data.status === 'pending')
+      // Find the most recent completed scan for same brand before this one
+      const prev = allScans
+        .filter(s => s.id !== params.id && s.status === 'complete' && s.target_brand === data.target_brand)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+      setPrevScore(prev?.score ?? null)
     } catch (e: any) { setError(e.message) }
     finally { setLoading(false) }
   }, [params.id])
@@ -162,6 +171,9 @@ export default function ReportPage() {
   )
 
   const color = scoreColor(report.score)
+  const delta = prevScore !== null ? report.score - prevScore : null
+  const deltaColor = delta === null ? '' : delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-rose-400' : 'text-[#7a8fa6]'
+  const deltaLabel = delta === null ? null : delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : '±0'
 
   return (
     <div className="p-8 max-w-5xl space-y-8">
@@ -169,7 +181,18 @@ export default function ReportPage() {
       <div className="flex items-start justify-between animate-fade-up">
         <div>
           <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-xs text-[#7a8fa6] hover:text-white mb-3 transition-colors"><ArrowLeft size={12}/> Overview</Link>
-          <h1 className="font-['Syne'] text-2xl font-bold text-white">{report.target_brand}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-['Syne'] text-2xl font-bold text-white">{report.target_brand}</h1>
+            {deltaLabel && (
+              <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${
+                delta! > 0 ? 'bg-emerald-400/10 border-emerald-400/20' :
+                delta! < 0 ? 'bg-rose-400/10 border-rose-400/20' :
+                'bg-[#0f1b30] border-[rgba(34,211,238,0.1)]'
+              } ${deltaColor}`}>
+                {deltaLabel} vs last scan
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3 mt-1">
             <a href={report.website_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-[#7a8fa6] hover:text-cyan-400 transition-colors">
               {report.website_url} <ExternalLink size={10}/>

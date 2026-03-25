@@ -1,6 +1,6 @@
 # Visora — Project Context
 > 每次开新对话时，把这个文件内容告诉 Claude，即可无缝继续工作。
-> 最后更新：2026-03-25（Session 12 完成）
+> 最后更新：2026-03-25（Session 13 进行中）
 > **规则：每次操作完成后必须立即更新本文件。**
 
 ---
@@ -122,6 +122,8 @@ visora/
 - **api.visoraapp.com/health 验证**：`{"status":"ok"}` ✅
 - **llms.txt 自动生成**：每次扫描自动生成用户专属 llms.txt，存入 `report_json.generated_content.llms_txt`，报告页 CodeBlock 展示 ✅
 - **竞品引用来源归因**：`competitor_sources` 存入 report_json，报告页新增「Why AI Cites Your Competitors」柱状图模块 ✅
+- **Product Keywords 字段**：扫描表单新增可选字段，用实际产品关键词生成精准问题（"GEO optimization" 而非 "SaaS / Software"），透传链路完整 ✅
+- **scanner.js buildQuestions 优化**：优先用 keywords 第一词，支持多词轮转，fallback 到 category ✅
 
 ### ✅ 阶段九 — Bug 修复 + 完整流程验证（Session 11）
 - **修复 Bug 1**：`lib/api.ts` 所有接口加 `fetchWithTimeout(15s)` + `normalizeError()`，错误提示友好化 ✅

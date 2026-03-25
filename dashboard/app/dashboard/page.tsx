@@ -3,12 +3,81 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { getUserReports, type ScanReport } from '@/lib/api'
+import { getUserReports, scoreColor, type ScanReport } from '@/lib/api'
 import ScanRow from '@/components/dashboard/ScanRow'
 import EmptyState from '@/components/dashboard/EmptyState'
-import { PlusCircle, TrendingUp, Activity, Target, Radar, RefreshCw } from 'lucide-react'
+import { PlusCircle, TrendingUp, RefreshCw } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { formatDate } from '@/lib/utils'
 
 function SkeletonRow() { return <div className="h-[72px] rounded-xl skeleton"/> }
+
+const BRAND_COLORS = ['#22d3ee', '#34d399', '#fbbf24', '#f472b6', '#a78bfa']
+
+function TrendChart({ scans }: { scans: ScanReport[] }) {
+  // Group by brand, sort by date asc, keep last 10 per brand
+  const grouped: Record<string, { date: string; score: number }[]> = {}
+  ;[...scans].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .forEach(s => {
+      if (!grouped[s.target_brand]) grouped[s.target_brand] = []
+      grouped[s.target_brand].push({
+        date: new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        score: s.score,
+      })
+    })
+
+  const brands = Object.keys(grouped)
+  const hasTrend = brands.some(b => grouped[b].length >= 2)
+  if (!hasTrend) return null
+
+  // Merge into unified timeline rows
+  const allDates = [...new Set(brands.flatMap(b => grouped[b].map(p => p.date)))]
+  const chartData = allDates.map(date => {
+    const row: Record<string, unknown> = { date }
+    brands.forEach(b => {
+      const p = grouped[b].find(x => x.date === date)
+      if (p) row[b] = p.score
+    })
+    return row
+  })
+
+  return (
+    <div className="rounded-2xl border border-[rgba(34,211,238,0.1)] bg-[#0a1120] p-5 mb-8 animate-fade-up delay-350">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp size={14} className="text-cyan-400"/>
+        <h2 className="font-['Syne'] text-sm font-bold text-white">Score Trend</h2>
+        <div className="flex items-center gap-3 ml-auto">
+          {brands.map((b, i) => (
+            <span key={b} className="flex items-center gap-1.5 text-[11px] text-[#7a8fa6]">
+              <span className="w-2 h-2 rounded-full" style={{ background: BRAND_COLORS[i % BRAND_COLORS.length] }}/>
+              {b}
+            </span>
+          ))}
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={160}>
+        <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+          <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#7a8fa6' }} axisLine={false} tickLine={false}/>
+          <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#7a8fa6' }} axisLine={false} tickLine={false}/>
+          <ReferenceLine y={50} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 3"/>
+          <Tooltip
+            contentStyle={{ background: '#0f1b30', border: '1px solid rgba(34,211,238,0.15)', borderRadius: 10, fontSize: 12 }}
+            labelStyle={{ color: '#7a8fa6', marginBottom: 4 }}
+            formatter={(val: number, name: string) => [
+              <span style={{ color: scoreColor(val) }}>{val}</span>,
+              name,
+            ]}
+          />
+          {brands.map((b, i) => (
+            <Line key={b} type="monotone" dataKey={b} stroke={BRAND_COLORS[i % BRAND_COLORS.length]}
+              strokeWidth={2} dot={{ r: 3, fill: BRAND_COLORS[i % BRAND_COLORS.length] }}
+              activeDot={{ r: 5 }} connectNulls/>
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
 
 function StatCard({ label, value, sub, accent }: { label: string; value: string|number; sub: string; accent: string }) {
   const colors: Record<string, string> = {
@@ -76,6 +145,8 @@ export default function DashboardPage() {
         <div className="animate-fade-up delay-200"><StatCard label="Best Score"   value={loading ? '—' : bestScore || '—'}                             sub="highest recorded"                                accent="amber"/></div>
         <div className="animate-fade-up delay-300"><StatCard label="Latest"       value={loading ? '—' : latestScore ?? '—'}                           sub={completed[0]?.target_brand ?? 'run a scan first'} accent="rose"/></div>
       </div>
+
+      {!loading && <TrendChart scans={completed}/>}
 
       <div className="animate-fade-up delay-400">
         <div className="flex items-center justify-between mb-4">
