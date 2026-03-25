@@ -1,5 +1,5 @@
 # Visora Roadmap
-> visoraapp.com · 更新：2026-03-25（Session 9）
+> visoraapp.com · 更新：2026-03-25（Session 12）
 
 ---
 
@@ -37,6 +37,12 @@
 - [x] 后端 paywall 检查（credits 不足返回 402）
 - [x] 扫描后自动扣 credits（仅 starter）
 - [x] Creem webhook 自动升降级 plan
+
+### 报告透明度（Session 12）
+- [x] 报告页「How We Scored You」—— 4 维权重分解可视化
+- [x] 报告页「Queries Asked to AI」—— 所有 prompt + ✅/❌ 品牌提及状态
+- [x] Action Items 低分专属路径（G2 / PH / Reddit 带直链）
+- [x] VPS pm2 路径修复，deploy.sh 更新
 
 ---
 

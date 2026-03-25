@@ -42,6 +42,7 @@ export interface ScanReport {
     brand_mentioned: boolean
     competitors_mentioned: string[]
   }>
+  competitor_sources?: Record<string, Array<[string, number]>>
   generated_content?: {
     faq?: string
     schema?: string

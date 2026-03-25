@@ -352,19 +352,38 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* Competitor Sources */}
-      {report.citation_gaps.some(g => g.sources.length > 0) && (
+      {/* Competitor Source Attribution — why does AI cite them? */}
+      {report.competitor_sources && Object.keys(report.competitor_sources).length > 0 &&
+       Object.values(report.competitor_sources).some(v => v.length > 0) && (
         <div className="animate-fade-up delay-400">
-          <h2 className="font-['Syne'] text-base font-bold text-white mb-4">Competitor Citation Sources</h2>
+          <h2 className="font-['Syne'] text-base font-bold text-white mb-1 flex items-center gap-2">
+            <Info size={16} className="text-amber-400"/> Why AI Cites Your Competitors
+          </h2>
+          <p className="text-xs text-[#3d5166] mb-4">These are the platforms driving competitor citations. Getting listed on the same platforms will close the gap.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {report.citation_gaps.filter(g => g.sources.length > 0).map(gap => (
-              <div key={gap.competitor} className="bg-[#0a1120] border border-[rgba(34,211,238,0.08)] rounded-xl p-4">
-                <p className="text-xs font-semibold text-white mb-2">{gap.competitor}</p>
-                <ul className="space-y-1">
-                  {gap.sources.slice(0, 5).map((src, i) => (
-                    <li key={i} className="text-xs text-[#7a8fa6] truncate font-mono">{src}</li>
+            {Object.entries(report.competitor_sources)
+              .filter(([, sources]) => sources.length > 0)
+              .map(([competitor, sources]) => (
+              <div key={competitor} className="bg-[#0a1120] border border-amber-400/10 rounded-2xl p-5">
+                <p className="text-sm font-semibold text-white mb-3">
+                  <span className="text-amber-400">{competitor}</span>
+                  <span className="text-[#3d5166] font-normal text-xs ml-2">gets cited via:</span>
+                </p>
+                <div className="space-y-2">
+                  {sources.slice(0, 6).map(([domain, count], i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="flex-1 h-1 bg-[#0f1b30] rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-400/50 rounded-full"
+                          style={{ width: `${Math.min((count / (sources[0]?.[1] || 1)) * 100, 100)}%` }}/>
+                      </div>
+                      <span className="text-xs font-mono text-[#7a8fa6] w-32 truncate">{domain}</span>
+                      <span className="text-xs font-mono text-amber-400 w-8 text-right">{count}×</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
+                {sources.length === 0 && (
+                  <p className="text-xs text-[#3d5166]">No citation sources detected for this competitor</p>
+                )}
               </div>
             ))}
           </div>

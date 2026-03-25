@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { scanBrand } from '../src/scanner.js';
 import { scoreResults } from '../src/scorer.js';
 import { runFullAnalysis } from '../src/analyzer.js';
+import { generateLlmsTxt } from '../src/generator.js';
 import { createClient } from '@supabase/supabase-js';
 
 export const scanRouter = Router();
@@ -15,7 +16,7 @@ const supabase = createClient(
 );
 
 // ─── Helper: transform raw output → ScanReport shape (matches frontend types) ─
-function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, competitors, scoreData, analysis, rawResults, createdAt }) {
+function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, competitors, scoreData, analysis, rawResults, createdAt, llmsTxt }) {
   const PRIORITY_MAP = { 1: 'high', 2: 'medium', 3: 'low' };
 
   // score_breakdown: flat numbers 0-100 + weights for UI explanation
@@ -84,7 +85,11 @@ function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, co
     citation_gaps,
     action_items,
     scan_questions,
-    generated_content: {},
+    generated_content: {
+      llms_txt: llmsTxt || null,
+    },
+    // competitor source attribution: { "Otterly": [["reddit.com", 3], ...] }
+    competitor_sources: analysis.competitorSources || {},
     created_at: createdAt || new Date().toISOString(),
     status: 'complete',
   };
@@ -156,9 +161,18 @@ scanRouter.post('/', async (req, res) => {
       targetScore: scoreData.score,
     });
 
+    // Generate llms.txt (template-based, no API call needed)
+    const llmsTxt = generateLlmsTxt({
+      brand: targetBrand,
+      websiteUrl: websiteUrl || `https://example.com`,
+      category,
+      description: `${targetBrand} is a ${category} tool.`,
+      pricing: [{ name: 'Free', price: 0 }, { name: 'Pro', price: 29 }],
+    });
+
     const report = buildScanReport({
       scanId, userId, targetBrand, websiteUrl, category, competitors,
-      scoreData, analysis, rawResults: rawReport.raw, createdAt,
+      scoreData, analysis, rawResults: rawReport.raw, llmsTxt, createdAt,
     });
 
     // Persist to Supabase

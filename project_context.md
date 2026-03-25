@@ -1,6 +1,6 @@
 # Visora — Project Context
 > 每次开新对话时，把这个文件内容告诉 Claude，即可无缝继续工作。
-> 最后更新：2026-03-25（Session 11 完成）
+> 最后更新：2026-03-25（Session 12 完成）
 > **规则：每次操作完成后必须立即更新本文件。**
 
 ---
@@ -36,7 +36,8 @@
 | Backend API | https://api.visoraapp.com |
 | API Health Check | https://api.visoraapp.com/health |
 | VPS SSH | `ssh -i ~/.ssh/deeask-usa.pem root@47.85.12.236` |
-| VPS 后端路径 | /opt/visora/mvp |
+| VPS git root | /opt/visora/mvp |
+| VPS pm2 运行路径 | /opt/visora/mvp/mvp（Session 12 修复，git pull 导致嵌套一层）|
 | pm2 管理 | `pm2 list / logs visora-api / restart visora-api` |
 | 一键部署 | `ssh -i ~/.ssh/deeask-usa.pem root@47.85.12.236 "bash /opt/visora/deploy.sh"` |
 
@@ -111,6 +112,14 @@ visora/
 - **新用户注册流程验证**：liutao0518@qq.com 注册 → Supabase 邮件验证 → 登录 → Dashboard，全流程 ✅
 - **Credits 显示正确**：新用户进扫描页显示 "Free scans left: 1" ✅
 - **国内访问 VPS 结论**：Chrome CDP 独立 profile 默认不走系统代理，访问境外 VPS 需加 `--proxy-server` 启动参数（本机代理端口 1087）
+
+### ✅ 阶段十 — 报告透明度升级 + VPS 路径修复（Session 12）
+- **报告页新增「How We Scored You」模块**：4 维权重分解（50/20/15/15）+ 原始分 + 贡献点数 ✅
+- **报告页新增「Queries Asked to AI」模块**：10 条 prompt 全列出，✅ Cited / ❌ Missed + 竞品被提情况 ✅
+- **Action Items 低分优化**：Score < 10 时改为 G2 / Product Hunt / Reddit 具体 GTM 行动，每条带直链 ✅
+- **scan.js**：存入 `scan_questions`、`score weights`、`stats` 到 `report_json` ✅
+- **修复 VPS pm2 路径问题**：git pull 导致代码嵌套到 `/opt/visora/mvp/mvp/`，重新指向 pm2 并更新 deploy.sh ✅
+- **api.visoraapp.com/health 验证**：`{"status":"ok"}` ✅
 
 ### ✅ 阶段九 — Bug 修复 + 完整流程验证（Session 11）
 - **修复 Bug 1**：`lib/api.ts` 所有接口加 `fetchWithTimeout(15s)` + `normalizeError()`，错误提示友好化 ✅
