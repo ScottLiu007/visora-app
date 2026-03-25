@@ -14,8 +14,16 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
+const allowedOrigins = (process.env.ALLOWED_ORIGIN || 'http://localhost:3000,https://visoraapp.com')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || ['http://localhost:3000', 'https://visoraapp.com'],
+  origin: (origin, callback) => {
+    // allow requests with no origin (curl, mobile apps, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, origin);
+    return callback(new Error(`CORS blocked: ${origin}`));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '1mb' }));
