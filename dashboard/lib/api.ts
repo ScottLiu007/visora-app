@@ -44,6 +44,13 @@ export interface ScanReport {
     competitors_mentioned: string[]
   }>
   competitor_sources?: Record<string, Array<[string, number]>>
+  keywords?: string | null
+  citation_opportunities?: Array<{
+    title: string
+    platform: string
+    why: string
+    action: string
+  }>
   generated_content?: {
     faq?: string
     schema?: string
@@ -104,6 +111,22 @@ export async function triggerScan(data: ScanRequest, token: string): Promise<{ s
   } catch (e) {
     throw normalizeError(e)
   }
+}
+
+/** Public read-only report (no auth) — uses share token from URL */
+export async function getPublicReport(shareToken: string): Promise<ScanReport> {
+  const res = await fetchWithTimeout(`${API_URL}/api/report/public/${encodeURIComponent(shareToken)}`)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function createShareLink(reportId: string, accessToken: string): Promise<{ shareUrl: string }> {
+  const res = await fetchWithTimeout(`${API_URL}/api/report/${reportId}/share`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
 }
 
 export async function getReport(id: string, token: string): Promise<ScanReport> {

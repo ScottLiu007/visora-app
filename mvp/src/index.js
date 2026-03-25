@@ -9,6 +9,7 @@ import { reportRouter } from '../api/report.js';
 import { waitlistRouter } from '../api/waitlist.js';
 import { userRouter } from '../api/user.js';
 import { webhooksRouter } from '../api/webhooks.js';
+import { cronRouter } from '../api/cron.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,6 +50,7 @@ app.use('/api/report', reportRouter);
 app.use('/api/waitlist', waitlistRouter);
 app.use('/api/user', userRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/cron', cronRouter);
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((req, res) => {

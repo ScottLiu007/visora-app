@@ -10,6 +10,9 @@ create table if not exists public.profiles (
   plan         text not null default 'starter',
   websites     text[] default '{}',
   scan_credits int  not null default 1,
+  weekly_scan_config jsonb,
+  email_notifications boolean not null default true,
+  last_auto_scan_at timestamptz,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
@@ -28,8 +31,13 @@ create table if not exists public.scans (
   error_message    text,
   question_count   int default 10,
   created_at       timestamptz not null default now(),
-  completed_at     timestamptz
+  completed_at     timestamptz,
+  share_token      text
 );
+
+create unique index if not exists scans_share_token_unique
+  on public.scans (share_token)
+  where share_token is not null;
 
 -- Waitlist
 create table if not exists public.waitlist (

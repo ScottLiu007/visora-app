@@ -1,6 +1,6 @@
 # Visora — Project Context
 > 每次开新对话时，把这个文件内容告诉 Claude，即可无缝继续工作。
-> 最后更新：2026-03-25（Session 13 进行中）
+> 最后更新：2026-03-25（Session 15）
 > **规则：每次操作完成后必须立即更新本文件。**
 
 ---
@@ -165,6 +165,29 @@ ALLOWED_ORIGIN=https://dashboard.visoraapp.com,https://visora-app-git-main-scott
 - How We Scored You：4 维权重分解 + "0 of 10 AI queries" 统计 ✅
 - Queries Asked to AI：10 条 prompt 全部 Missed（Visora 尚不可见）✅
 - Generated Content：llms.txt 展开 + Copy 按钮 ✅
+
+### ✅ Session 15 — 中期功能包（cron / Resend / 公开分享 / Citation 机会）
+- **每周自动扫描**：`POST /api/cron/weekly-auto-scan`，请求头 `Authorization: Bearer $CRON_SECRET`（或 `X-Visora-Cron`）。对 `plan=growth` 且 `weekly_scan_config` 非空的用户各跑一次扫描（插入 `scans` → `runScanPipeline` → 写库 → 更新 `last_auto_scan_at`）。**Growth 用户每次手动扫描成功后**会把当次参数写入 `weekly_scan_config`（作为下周 cron 的配置）。
+- **邮件（Resend）**：Builder/Growth 扫描完成后发一封「分数 + vs 上次 + 报告链接」；未配置 `RESEND_API_KEY` 时静默跳过。环境变量：`RESEND_API_KEY`、`RESEND_FROM`（默认 `Visora <onboarding@resend.dev>`）、`PUBLIC_DASHBOARD_URL`（邮件内报告链接）。
+- **公开分享**：`POST /api/report/:id/share`（需用户 JWT）生成/复用 `share_token`；`GET /api/report/public/:token` 无鉴权返回报告 JSON。前端 `/share/[token]` 只读页 + 报告页「Public link」复制。
+- **Citation opportunities**：`mvp/src/opportunities.js` 单次 Perplexity 调用，结构化写入 `report_json.citation_opportunities`；报告页与公开页展示。
+- **数据库**：执行 `mvp/supabase/migration_session14.sql`（或新库用已更新的 `schema.sql`）：`profiles.weekly_scan_config`、`email_notifications`、`last_auto_scan_at`；`scans.share_token` 唯一索引。
+- **依赖**：`mvp/package.json` 增加 `resend`；VPS 需 `npm install`、`pm2 restart`，并配置 `CRON_SECRET` + crontab 示例见下。
+
+**VPS crontab 示例（每周一 09:00 UTC）：**
+```bash
+0 9 * * 1 curl -fsS -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://api.visoraapp.com/api/cron/weekly-auto-scan
+```
+
+### ✅ Session 14 — 历史趋势 + Delta 对比
+- **Overview 页折线图**：将同品牌历史扫描分数按时间排序，绘制多线趋势图（≥2 条数据才显示）
+  - 多品牌各用不同颜色区分
+  - Y 轴 0-100，参考线 y=50，tooltip 显示颜色化分数
+- **报告页 delta badge**：标题旁显示 "+5 vs last scan"（绿色）/ "-3 vs last scan"（红色）
+  - 加载报告时并发请求用户所有扫描，找到同品牌上一次完成的分数
+  - 首次扫描不显示 badge
+- 前端改动：`dashboard/app/dashboard/page.tsx`、`dashboard/app/dashboard/report/[id]/page.tsx`
+- 已 push，Vercel 自动部署中
 
 ### GTM
 - [ ] Reddit 首帖 r/SEO（草稿在 `gtm/reddit-posts.md`）

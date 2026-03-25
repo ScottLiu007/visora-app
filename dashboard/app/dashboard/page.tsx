@@ -31,7 +31,7 @@ function TrendChart({ scans }: { scans: ScanReport[] }) {
   if (!hasTrend) return null
 
   // Merge into unified timeline rows
-  const allDates = [...new Set(brands.flatMap(b => grouped[b].map(p => p.date)))]
+  const allDates = Array.from(new Set(brands.flatMap(b => grouped[b].map(p => p.date))))
   const chartData = allDates.map(date => {
     const row: Record<string, unknown> = { date }
     brands.forEach(b => {

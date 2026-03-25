@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { getReport, getUserReports, scoreColor, scoreLabel, type ScanReport } from '@/lib/api'
+import { getReport, getUserReports, createShareLink, scoreColor, scoreLabel, type ScanReport } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
-import { ArrowLeft, ExternalLink, AlertTriangle, TrendingUp, Loader2, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Zap, Shield, Flame, CheckCircle2, XCircle, Info } from 'lucide-react'
+import { ArrowLeft, ExternalLink, AlertTriangle, TrendingUp, Loader2, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Zap, Shield, Flame, CheckCircle2, XCircle, Info, Link2, Sparkles } from 'lucide-react'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
 
 // ── Score Ring ───────────────────────────────────────────────────────────────
@@ -116,6 +116,8 @@ export default function ReportPage() {
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState<string | null>(null)
   const [polling, setPolling]       = useState(false)
+  const [shareBusy, setShareBusy]   = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -138,6 +140,22 @@ export default function ReportPage() {
 
   useEffect(() => { load() }, [load])
   useEffect(() => { if (!polling) return; const t = setInterval(load, 4000); return () => clearInterval(t) }, [polling, load])
+
+  const copyPublicLink = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session || !report) return
+    setShareBusy(true)
+    try {
+      const { shareUrl } = await createShareLink(report.id, session.access_token)
+      await navigator.clipboard.writeText(shareUrl)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2500)
+    } catch {
+      /* ignore */
+    } finally {
+      setShareBusy(false)
+    }
+  }, [report, supabase])
 
   if (loading) return (
     <div className="p-8 max-w-5xl space-y-6">
@@ -202,9 +220,16 @@ export default function ReportPage() {
             <span className="text-xs text-[#3d5166] bg-[#0f1b30] border border-[rgba(34,211,238,0.08)] px-2 py-0.5 rounded-lg">{report.category}</span>
           </div>
         </div>
-        <button onClick={load} className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[rgba(34,211,238,0.15)] text-[#7a8fa6] hover:text-white text-sm transition-all">
-          <RefreshCw size={13}/> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => void copyPublicLink()} disabled={shareBusy}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[rgba(34,211,238,0.15)] text-[#7a8fa6] hover:text-white text-sm transition-all disabled:opacity-40">
+            {shareCopied ? <Check size={13} className="text-emerald-400"/> : <Link2 size={13}/>}
+            {shareCopied ? 'Copied link' : 'Public link'}
+          </button>
+          <button onClick={load} className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[rgba(34,211,238,0.15)] text-[#7a8fa6] hover:text-white text-sm transition-all">
+            <RefreshCw size={13}/> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Top row: Score + Radar + Gap */}
@@ -407,6 +432,25 @@ export default function ReportPage() {
                 {sources.length === 0 && (
                   <p className="text-xs text-[#3d5166]">No citation sources detected for this competitor</p>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {report.citation_opportunities && report.citation_opportunities.length > 0 && (
+        <div className="animate-fade-up delay-450">
+          <h2 className="font-['Syne'] text-base font-bold text-white mb-1 flex items-center gap-2">
+            <Sparkles size={16} className="text-amber-400"/> Citation opportunities
+          </h2>
+          <p className="text-xs text-[#3d5166] mb-4">Where AI tends to cite brands in your niche — concrete ideas to earn the same visibility.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {report.citation_opportunities.map((o, i) => (
+              <div key={i} className="bg-[#0a1120] border border-amber-400/12 rounded-2xl p-5">
+                <p className="text-sm font-semibold text-white">{o.title}</p>
+                <p className="text-[10px] text-amber-400/90 mt-1 uppercase tracking-wider">{o.platform}</p>
+                <p className="text-sm text-[#7a8fa6] mt-3 leading-relaxed">{o.why}</p>
+                <p className="text-xs text-cyan-400/90 mt-3 leading-relaxed border-t border-[rgba(34,211,238,0.08)] pt-3">{o.action}</p>
               </div>
             ))}
           </div>

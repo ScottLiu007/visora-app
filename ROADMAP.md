@@ -1,5 +1,5 @@
 # Visora Roadmap
-> visoraapp.com · 更新：2026-03-25（Session 12）
+> visoraapp.com · 更新：2026-03-25（Session 15）
 
 ---
 
@@ -38,6 +38,17 @@
 - [x] 扫描后自动扣 credits（仅 starter）
 - [x] Creem webhook 自动升降级 plan
 
+### 中期能力（Session 15）
+- [x] 每周自动扫描 — `POST /api/cron/weekly-auto-scan` + Growth 用户 `weekly_scan_config` + VPS crontab
+- [x] 分数变化邮件 — Resend，Builder/Growth 扫描完成触发（需 `RESEND_API_KEY`）
+- [x] 报告公开分享 — `share_token` + `/share/:token` + 报告页复制链接
+- [x] Citation 机会提醒 — `opportunities.js` 单次 Perplexity，写入报告 JSON
+
+### 历史趋势对比（Session 14）
+- [x] Overview 页：Score Trend 折线图（同品牌多次扫描历史，≥2 条才显示）
+- [x] 报告页：标题旁「+5 vs last scan」/ 「-3 vs last scan」delta badge（绿/红色）
+- [x] 并发加载当前报告 + 用户历史，找到同品牌上一次完成的分数做对比
+
 ### 报告透明度（Session 12）
 - [x] 报告页「How We Scored You」—— 4 维权重分解可视化
 - [x] 报告页「Queries Asked to AI」—— 所有 prompt + ✅/❌ 品牌提及状态
@@ -72,15 +83,17 @@
 
 优先级从高到低：
 
-| 功能 | 说明 | 影响 |
-|------|------|------|
-| 邮件通知 | 扫描完成 / 分数变化提醒 | 留存 |
-| 定时扫描 | 每周自动跑，不用手动触发 | 核心价值 |
-| 历史趋势图 | 分数随时间变化曲线 | 留存 |
-| 报告导出 PDF | 一键导出，方便分享给团队 | 传播 |
-| 报告分享链接 | 公开链接，不用登录也能看 | 传播 |
-| FAQ 内容生成 | 基于扫描结果自动生成 FAQ 文案 | 差异化 |
-| Schema 代码生成 | 一键生成 FAQPage schema markup | 差异化 |
+| 功能 | 说明 | 状态 | 影响 |
+|------|------|------|------|
+| ~~历史趋势图~~ | Overview 折线图 + 报告页 delta badge | ✅ | 留存 |
+| ~~邮件通知~~ | Resend，Builder/Growth 扫描完成 + 周报复用同一模板 | ✅ | 留存 |
+| ~~定时扫描 cron~~ | Growth + `weekly_scan_config` + `CRON_SECRET` | ✅ | 核心卖点 |
+| ~~报告分享链接~~ | `share_token` + 公开 API + `/share` 页 | ✅ | 传播 |
+| ~~Citation 机会~~ | Perplexity 一次调用，结构化机会列表 | ✅ | 差异化 |
+| 报告导出 PDF | 一键导出，方便分享给团队 | 中期 | 传播 |
+| FAQ 内容生成 | 基于扫描结果自动生成 FAQ 文案 | 中期 | 差异化 |
+| Schema 代码生成 | 一键生成 FAQPage schema markup | 中期 | 差异化 |
+| 多模型覆盖 | Claude / Gemini / Perplexity 分别测，对比可见性 | 远期 | 核心竞争力 |
 
 ---
 
