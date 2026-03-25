@@ -1,25 +1,46 @@
-# Visora — getvisora.com
+# Visora
 
-面向英文市场中小企业和独立开发者的 GEO 自助优化工具。
+> GEO visibility tool for indie hackers and small SaaS — get cited by ChatGPT, Perplexity, and Claude.
 
-## 一句话定位
-帮助 indie hacker 和小型 SaaS 出现在 ChatGPT、Perplexity、Claude 的推荐结果里。
+**Live:** [visoraapp.com](https://visoraapp.com) · [dashboard.visoraapp.com](https://dashboard.visoraapp.com)
 
-## 核心差异化
-- 价格：$29-49/月（竞品最低 $99+）
-- 不只监控，提供可执行的内容优化建议
-- 基于中国已验证的 GEO 方法论，英文市场首发
+---
 
-## 当前状态
-- [x] 产品全景设计完成
-- [x] 中国 GEO 产业研究完成
-- [ ] 技术验证脚本
-- [ ] MVP 开发
-- [ ] Landing Page
-- [ ] 发布
+## What it does
 
-## 文件结构
-- product/ 产品设计文档
-- research/ 市场研究和竞品分析
-- tech/ 技术架构
-- gtm/ 去市场策略
+Visora scans AI search engines to measure how often your brand appears in responses, scores your GEO visibility across 4 dimensions, and tells you exactly what to fix.
+
+**Pricing:** Builder $29/mo · Growth $79/mo (competitors start at $99+)
+
+---
+
+## Stack
+
+| Layer | Tech |
+|-------|------|
+| Landing | Static HTML, GitHub Pages |
+| Dashboard | Next.js 14, Supabase Auth, Vercel |
+| Backend API | Node.js + Express, VPS (pm2 + nginx) |
+| AI Scanning | OpenRouter API |
+| Payments | Creem |
+| Database | Supabase (PostgreSQL) |
+
+---
+
+## Local dev
+
+```bash
+# Backend (port 3001)
+cd mvp && npm install && npm run dev
+
+# Dashboard (port 3002)
+cd dashboard && npm install && npm run dev
+```
+
+Copy `mvp/.env.example` → `mvp/.env` and fill in keys.
+
+---
+
+## Project docs
+
+For session continuity and detailed context, see [`project_context.md`](./project_context.md).
