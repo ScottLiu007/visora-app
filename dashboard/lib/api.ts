@@ -43,39 +43,81 @@ export interface ScanReport {
   status: 'pending' | 'running' | 'complete' | 'error'
 }
 
+// Friendly network error messages
+function normalizeError(e: unknown): Error {
+  if (e instanceof TypeError && (e.message === 'Failed to fetch' || e.message.includes('fetch'))) {
+    return new Error('Unable to reach the server. Please check your connection and try again.')
+  }
+  if (e instanceof Error) return e
+  return new Error(String(e))
+}
+
+// fetch with 15s timeout
+async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error('Request timed out. The server may be slow — please try again.')
+    }
+    throw normalizeError(e)
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export async function getUserPlan(userId: string, token: string): Promise<{ plan: string; scan_credits: number }> {
-  const res = await fetch(`${API_URL}/api/user/plan?userId=${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) return { plan: 'starter', scan_credits: 1 }
-  return res.json()
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/api/user/plan?userId=${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return { plan: 'starter', scan_credits: 1 }
+    return res.json()
+  } catch {
+    // Silently fall back — scan page shows credits as 1 so user can still try
+    return { plan: 'starter', scan_credits: 1 }
+  }
 }
 
 export async function triggerScan(data: ScanRequest, token: string): Promise<{ scanId: string }> {
-  const res = await fetch(`${API_URL}/api/scan`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/api/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  } catch (e) {
+    throw normalizeError(e)
+  }
 }
 
 export async function getReport(id: string, token: string): Promise<ScanReport> {
-  const res = await fetch(`${API_URL}/api/report/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) throw new Error(await res.text())
-  return res.json()
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/api/report/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  } catch (e) {
+    throw normalizeError(e)
+  }
 }
 
 export async function getUserReports(userId: string, token: string): Promise<ScanReport[]> {
-  const res = await fetch(`${API_URL}/api/report/user/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) throw new Error(await res.text())
-  const data = await res.json()
-  return data.scans || []
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/api/report/user/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) throw new Error(await res.text())
+    const data = await res.json()
+    return data.scans || []
+  } catch (e) {
+    throw normalizeError(e)
+  }
 }
 
 export function scoreColor(score: number): string {

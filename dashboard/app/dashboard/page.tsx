@@ -83,8 +83,9 @@ export default function DashboardPage() {
           {scans.length > 0 && <span className="text-xs text-[#7a8fa6] font-mono">{scans.length} total</span>}
         </div>
         {error && (
-          <div className="bg-rose-400/10 border border-rose-400/20 rounded-xl px-5 py-4 text-sm text-rose-400 mb-4">
-            {error} — <button onClick={load} className="underline hover:no-underline">retry</button>
+          <div className="bg-rose-400/10 border border-rose-400/20 rounded-xl px-5 py-4 text-sm text-rose-400 mb-4 flex items-center justify-between gap-4">
+            <span>⚠ {error}</span>
+            <button onClick={load} className="shrink-0 underline hover:no-underline">retry</button>
           </div>
         )}
         {loading ? (
