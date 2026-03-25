@@ -15,15 +15,23 @@ const supabase = createClient(
 );
 
 // ─── Helper: transform raw output → ScanReport shape (matches frontend types) ─
-function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, competitors, scoreData, analysis, createdAt }) {
+function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, competitors, scoreData, analysis, rawResults, createdAt }) {
   const PRIORITY_MAP = { 1: 'high', 2: 'medium', 3: 'low' };
 
-  // score_breakdown: flat numbers 0-100
+  // score_breakdown: flat numbers 0-100 + weights for UI explanation
   const score_breakdown = {
     appearance_rate:  scoreData.breakdown?.appearanceRate?.score  ?? 0,
     citation_density: scoreData.breakdown?.mentionDensity?.score  ?? 0,
     sentiment:        scoreData.breakdown?.sentiment?.score       ?? 0,
     source_quality:   scoreData.breakdown?.sourceQuality?.score   ?? 0,
+    // weights for "how we scored you" UI
+    weights: { appearance_rate: 0.50, citation_density: 0.20, sentiment: 0.15, source_quality: 0.15 },
+    // raw stats for transparency
+    stats: {
+      appearances: scoreData.stats?.appearances ?? 0,
+      total_questions: scoreData.stats?.totalQ ?? 0,
+      total_mentions: scoreData.stats?.totalMentions ?? 0,
+    },
   };
 
   // citation_gaps: group by competitor (from per-question gaps array)
@@ -52,7 +60,17 @@ function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, co
     title:       a.title,
     description: a.reason || '',
     impact:      a.impact || '',
+    url:         a.url || null,
   }));
+
+  // scan_questions: each prompt + whether brand was mentioned (for transparency UI)
+  const scan_questions = (rawResults || [])
+    .filter(r => !r.error)
+    .map(r => ({
+      question: r.question,
+      brand_mentioned: (r.mentions?.[targetBrand] || 0) > 0,
+      competitors_mentioned: competitors.filter(c => (r.mentions?.[c] || 0) > 0),
+    }));
 
   return {
     id:          scanId || null,
@@ -65,6 +83,7 @@ function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, co
     score_breakdown,
     citation_gaps,
     action_items,
+    scan_questions,
     generated_content: {},
     created_at: createdAt || new Date().toISOString(),
     status: 'complete',
@@ -139,7 +158,7 @@ scanRouter.post('/', async (req, res) => {
 
     const report = buildScanReport({
       scanId, userId, targetBrand, websiteUrl, category, competitors,
-      scoreData, analysis, createdAt,
+      scoreData, analysis, rawResults: rawReport.raw, createdAt,
     });
 
     // Persist to Supabase

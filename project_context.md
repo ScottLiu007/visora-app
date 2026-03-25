@@ -1,6 +1,6 @@
 # Visora — Project Context
 > 每次开新对话时，把这个文件内容告诉 Claude，即可无缝继续工作。
-> 最后更新：2026-03-25（Session 9 完成）
+> 最后更新：2026-03-25（Session 11 完成）
 > **规则：每次操作完成后必须立即更新本文件。**
 
 ---
@@ -38,6 +38,7 @@
 | VPS SSH | `ssh -i ~/.ssh/deeask-usa.pem root@47.85.12.236` |
 | VPS 后端路径 | /opt/visora/mvp |
 | pm2 管理 | `pm2 list / logs visora-api / restart visora-api` |
+| 一键部署 | `ssh -i ~/.ssh/deeask-usa.pem root@47.85.12.236 "bash /opt/visora/deploy.sh"` |
 
 ---
 
@@ -87,8 +88,36 @@ visora/
 - Vercel 构建成功，deploy id: 3DZarFsq2，状态 Ready ✅
 - Supabase Auth URL Configuration 已更新（Site URL + Redirect URLs 加入 Vercel 域名）✅
 
-### ✅ 阶段六 — 生产流程验证 + 自定义域名（Session 9）
+### ✅ 阶段七 — Paywall 接入（Session 9 续）
+- **升级墙组件** `components/ui/UpgradeWall.tsx`：显示 Builder/Growth 两个方案，直链 Creem checkout ✅
+- **扫描页 plan 检查**：登录后自动拉取 `plan + scan_credits`，credits=0 且 plan=starter 时显示升级墙 ✅
+- **后端 paywall**：`api/scan.js` 扫描前检查 credits，不足返回 402 + `upgrade_required` ✅
+- **后端扣 credits**：扫描成功后自动 -1（仅 starter plan）✅
+- **新增 `api/user.js`**：GET `/api/user/plan` 返回用户 plan 和 scan_credits ✅
+- **新增 `api/webhooks.js`**：POST `/api/webhooks/creem` 处理 `checkout.completed` / `subscription.active` / `subscription.canceled`，自动升降级 plan ✅
+- **Creem webhook 配置**：`https://api.visoraapp.com/api/webhooks/creem`，13 个事件全选 ✅
+- Vercel deploy `CzqDaKX39` Ready ✅
+
+## Creem 支付信息
+| 字段 | 值 |
+|------|-----|
+| Builder $29/mo checkout | https://www.creem.io/payment/prod_1dI5h87ZhzzodGpRrRSvbW |
+| Growth $79/mo checkout | https://www.creem.io/payment/prod_1Xl8T46dBXT2zWowehqoQf |
+| Webhook URL | https://api.visoraapp.com/api/webhooks/creem |
 - **生产完整流程验证通过**：Vercel URL 登录 → 扫描（~60s）→ 报告页，全程无阻 ✅
+
+### ✅ 阶段八 — 真实用户流程测试（Session 10）
+- **playwright-cdp 调通**：NO_PROXY 环境变量修复代理拦截问题 ✅
+- **新用户注册流程验证**：liutao0518@qq.com 注册 → Supabase 邮件验证 → 登录 → Dashboard，全流程 ✅
+- **Credits 显示正确**：新用户进扫描页显示 "Free scans left: 1" ✅
+- **国内访问 VPS 结论**：Chrome CDP 独立 profile 默认不走系统代理，访问境外 VPS 需加 `--proxy-server` 启动参数（本机代理端口 1087）
+
+### ✅ 阶段九 — Bug 修复 + 完整流程验证（Session 11）
+- **修复 Bug 1**：`lib/api.ts` 所有接口加 `fetchWithTimeout(15s)` + `normalizeError()`，错误提示友好化 ✅
+- **修复 Bug 2（核心）**：CORS `Access-Control-Allow-Origin` 返回整个逗号分隔列表 → 改为 origin callback 只返回匹配的单个域名 ✅
+- **修复 Bug 3**：扫描接口 timeout 15s → 120s（扫描本身需 ~60s）✅
+- **VPS 配置 git**：`/opt/visora/mvp` 初始化 git，绑定 GitHub remote，一键部署脚本 `/opt/visora/deploy.sh` ✅
+- **完整流程验证通过**：注册→邮件验证→登录→扫描页(credits=1)→扫描提交→VPS 执行完成→升级墙触发，全程 ✅
 - **修复 CORS 问题**：VPS `.env` 的 `ALLOWED_ORIGIN` 只有 `dashboard.visoraapp.com`（未绑定），
   导致 Vercel URL 被拒绝。修复：
   - `.env` 新增所有允许来源（Vercel URL、visoraapp.com、localhost 3000/3002）
@@ -113,7 +142,11 @@ ALLOWED_ORIGIN=https://dashboard.visoraapp.com,https://visora-app-git-main-scott
 
 ## 待完成
 
-- [ ] 确认 dashboard.visoraapp.com SSL 证书激活后，用正式域名完整测试登录→扫描→报告
+### 🐛 已发现 Bug（Session 10 真实用户流程测试）
+- [x] **Dashboard 新用户 "Failed to fetch"**：已修复 → 友好错误提示 + ⚠ 图标 + retry 按钮。
+- [x] **扫描页 plan 检查 "Failed to fetch"**：已修复 → silent fallback + 友好提示。
+
+### GTM
 - [ ] Reddit 首帖 r/SEO（草稿在 `gtm/reddit-posts.md`）
 - [ ] G2 注册：https://www.g2.com/products/new
 - [ ] Capterra 注册：https://www.capterra.com/vendors/sign-up
@@ -139,6 +172,64 @@ ALLOWED_ORIGIN=https://dashboard.visoraapp.com,https://visora-app-git-main-scott
 | Password | Visora2026! |
 | 登录地址（本地） | http://localhost:3002/auth/login |
 | 登录地址（生产） | https://dashboard.visoraapp.com/auth/login |
+
+---
+
+## 浏览器自动化工具链（auto-browser）
+
+使用 **playwright-cdp** 工具集控制 Chrome（完整交互能力）。
+
+### Step 1 — 启动 Chrome（每次使用前执行）
+
+**国内环境（需要代理访问 VPS/境外 API）：**
+```bash
+pkill -f "Google Chrome" && sleep 2 && \
+'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' \
+  --remote-debugging-port=9222 \
+  '--remote-allow-origins=http://127.0.0.1:9222' \
+  --user-data-dir=/tmp/chrome_cdp \
+  '--proxy-server=http://127.0.0.1:1087' \
+  '--proxy-bypass-list=<-loopback>' \
+  &
+```
+
+**无代理需求时（纯国内/本地访问）：**
+```bash
+pkill -f "Google Chrome" && sleep 2 && \
+'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' \
+  --remote-debugging-port=9222 \
+  '--remote-allow-origins=http://127.0.0.1:9222' \
+  --user-data-dir=/tmp/chrome_cdp \
+  &
+```
+
+确认成功：终端出现 `DevTools listening on ws://127.0.0.1:9222/...`
+
+**坑（血泪教训）：**
+1. `--user-data-dir` 必须加，否则 Chrome 报错拒绝开 debug port
+2. `--remote-allow-origins` 必须写具体地址 `http://127.0.0.1:9222`，不能用 `*`（zsh 通配符）
+3. 必须先 `pkill -f "Google Chrome"` 关掉所有 Chrome，否则参数被转发给旧实例
+4. macOS 上 `localhost` 优先解析到 IPv6 `::1`，Chrome 只监听 IPv4，所以 MCP 配置和 allow-origins 都用 `127.0.0.1`
+5. MCP 配置（`~/Library/Application Support/Claude/claude_desktop_config.json`）：
+   `playwright-cdp.args` 末尾必须是 `"http://127.0.0.1:9222"`，改完需重启 Claude Desktop
+6. **系统代理坑（Clash 等）**：如果机器开了系统代理（如 Clash），playwright-cdp MCP 进程连接 127.0.0.1:9222 时流量会被代理拦截，返回 400 错误。
+   **解决方案**：在 `claude_desktop_config.json` 的 playwright-cdp 段加 `env`，然后重启 Claude Desktop：
+   ```json
+   "env": {
+     "NO_PROXY": "127.0.0.1,localhost",
+     "no_proxy": "127.0.0.1,localhost"
+   }
+   ```
+
+### Step 2 — playwright-cdp 常用操作
+- `browser_navigate` — 导航到 URL
+- `browser_snapshot` — 获取页面无障碍树（**操作前必做**）
+- `browser_click` — 点击元素（用 snapshot 的 ref）
+- `browser_fill_form` / `browser_type` — 填写表单
+- `browser_wait_for` — 等待加载或文本出现
+- `browser_take_screenshot` — 截图确认结果
+
+**规则：snapshot → 操作 → wait → snapshot 确认。**
 
 ---
 

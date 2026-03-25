@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { getReport, scoreColor, scoreLabel, type ScanReport } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
-import { ArrowLeft, ExternalLink, AlertTriangle, TrendingUp, Loader2, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Zap, Shield, Flame } from 'lucide-react'
+import { ArrowLeft, ExternalLink, AlertTriangle, TrendingUp, Loader2, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Zap, Shield, Flame, CheckCircle2, XCircle, Info } from 'lucide-react'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
 
 // ── Score Ring ───────────────────────────────────────────────────────────────
@@ -229,7 +229,15 @@ export default function ReportPage() {
                       <span className={`text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md border ${cfg.bg} ${cfg.color}`}>{action.priority}</span>
                     </div>
                     <p className="text-sm text-[#7a8fa6] leading-relaxed">{action.description}</p>
-                    {action.impact && <p className="text-xs text-cyan-400 mt-2 flex items-center gap-1"><Zap size={10}/>{action.impact}</p>}
+                    <div className="flex items-center gap-3 mt-2">
+                      {action.impact && <p className="text-xs text-cyan-400 flex items-center gap-1"><Zap size={10}/>{action.impact}</p>}
+                      {action.url && (
+                        <a href={action.url} target="_blank" rel="noopener noreferrer"
+                          className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 underline underline-offset-2 transition-colors">
+                          Do it now <ExternalLink size={10}/>
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -237,6 +245,98 @@ export default function ReportPage() {
           })}
         </div>
       </div>
+
+      {/* Score Breakdown — How we scored you */}
+      <div className="animate-fade-up delay-250">
+        <h2 className="font-['Syne'] text-base font-bold text-white mb-4 flex items-center gap-2">
+          <Info size={16} className="text-cyan-400"/> How We Scored You
+        </h2>
+        <div className="bg-[#0a1120] border border-[rgba(34,211,238,0.08)] rounded-2xl p-6">
+          {/* Stats summary */}
+          {report.score_breakdown.stats && (
+            <p className="text-sm text-[#7a8fa6] mb-5">
+              Your brand appeared in{' '}
+              <span className="text-white font-semibold">{report.score_breakdown.stats.appearances}</span>
+              {' '}of{' '}
+              <span className="text-white font-semibold">{report.score_breakdown.stats.total_questions}</span>
+              {' '}AI queries
+              {report.score_breakdown.stats.total_mentions > 0 && (
+                <>, mentioned <span className="text-white font-semibold">{report.score_breakdown.stats.total_mentions}</span> time{report.score_breakdown.stats.total_mentions !== 1 ? 's' : ''} total</>
+              )}.
+            </p>
+          )}
+          {/* Weight breakdown */}
+          <div className="space-y-3">
+            {([
+              { key: 'appearance_rate',  label: 'Appearance Rate',  desc: 'How often your brand appeared across all queries', weight: 0.50 },
+              { key: 'citation_density', label: 'Mention Density',  desc: 'How many times you appeared when you did appear', weight: 0.20 },
+              { key: 'sentiment',        label: 'Sentiment',        desc: 'Whether AI mentioned you in a positive context',  weight: 0.15 },
+              { key: 'source_quality',   label: 'Source Quality',   desc: 'Authority of sites AI cited alongside your brand', weight: 0.15 },
+            ] as const).map(({ key, label, desc, weight }) => {
+              const raw = report.score_breakdown[key] as number
+              const contribution = Math.round(raw * weight)
+              const pct = Math.round(weight * 100)
+              return (
+                <div key={key} className="flex items-center gap-4">
+                  <div className="w-32 flex-shrink-0">
+                    <p className="text-xs font-semibold text-white">{label}</p>
+                    <p className="text-[10px] text-[#3d5166] mt-0.5">{pct}% weight</p>
+                  </div>
+                  <div className="flex-1 h-1.5 bg-[#0f1b30] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-1000"
+                      style={{ width: `${raw}%`, background: raw > 50 ? '#34d399' : raw > 20 ? '#fbbf24' : '#fb7185' }}
+                    />
+                  </div>
+                  <div className="w-20 flex-shrink-0 text-right">
+                    <span className="text-xs font-mono text-white">{Math.round(raw)}</span>
+                    <span className="text-[10px] text-[#3d5166]"> → +{contribution} pts</span>
+                  </div>
+                  <p className="hidden lg:block w-52 text-[10px] text-[#3d5166] leading-tight">{desc}</p>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-4 pt-4 border-t border-[rgba(34,211,238,0.06)] flex items-center justify-between">
+            <p className="text-xs text-[#3d5166]">Weighted composite score</p>
+            <p className="text-sm font-bold font-mono text-white">{report.score} / 100</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Scan Questions — transparency log */}
+      {report.scan_questions && report.scan_questions.length > 0 && (
+        <div className="animate-fade-up delay-300">
+          <h2 className="font-['Syne'] text-base font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp size={16} className="text-cyan-400"/> Queries Asked to AI
+            <span className="text-xs font-normal text-[#3d5166] ml-1">— did your brand appear?</span>
+          </h2>
+          <div className="bg-[#0a1120] border border-[rgba(34,211,238,0.08)] rounded-2xl divide-y divide-[rgba(34,211,238,0.05)]">
+            {report.scan_questions.map((q, i) => (
+              <div key={i} className="flex items-start gap-3 px-5 py-3.5">
+                <div className="flex-shrink-0 mt-0.5">
+                  {q.brand_mentioned
+                    ? <CheckCircle2 size={14} className="text-emerald-400"/>
+                    : <XCircle size={14} className="text-[#3d5166]"/>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm leading-snug ${q.brand_mentioned ? 'text-white' : 'text-[#7a8fa6]'}`}>{q.question}</p>
+                  {q.competitors_mentioned.length > 0 && (
+                    <p className="text-[10px] text-amber-400/70 mt-0.5">
+                      AI cited: {q.competitors_mentioned.join(', ')}
+                    </p>
+                  )}
+                </div>
+                <div className="flex-shrink-0">
+                  {q.brand_mentioned
+                    ? <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-md">Cited</span>
+                    : <span className="text-[10px] font-semibold text-[#3d5166] bg-[#0f1b30] px-2 py-0.5 rounded-md">Missed</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Generated Content */}
       {report.generated_content && Object.keys(report.generated_content).length > 0 && (

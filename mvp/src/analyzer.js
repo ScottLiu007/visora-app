@@ -65,6 +65,39 @@ export function attributeSources({ competitors, results }) {
 // ─── Action Recommendations ───────────────────────────────────────────────────
 // Generate 3 concrete, prioritized actions based on gap analysis
 export function generateActions({ targetBrand, gaps, competitorSources, targetScore }) {
+  // Brand is completely invisible — return specific GTM-first actions with direct URLs
+  if (targetScore < 10) {
+    return [
+      {
+        priority: 1,
+        type: 'platform',
+        title: `List ${targetBrand} on G2`,
+        reason: 'AI search engines heavily cite G2 reviews. Having zero G2 presence is the #1 reason new products are invisible to AI — it takes 1-2 hours and starts showing results within 2-4 weeks.',
+        effort: 'Low (1-2 hours)',
+        impact: 'High — visible in 2-4 weeks',
+        url: 'https://www.g2.com/products/new',
+      },
+      {
+        priority: 2,
+        type: 'launch',
+        title: `Launch ${targetBrand} on Product Hunt`,
+        reason: 'Product Hunt is one of the most frequently cited sources by Perplexity and ChatGPT. A launch day post creates an indexable, authoritative page AI can reference immediately.',
+        effort: 'Low (2-3 hours to prepare)',
+        impact: 'High — AI-indexable within 1 week',
+        url: 'https://www.producthunt.com/posts/new',
+      },
+      {
+        priority: 3,
+        type: 'community',
+        title: `Post about ${targetBrand} in r/SaaS or r/SEO`,
+        reason: 'Reddit is one of the top citation sources for AI search engines. A genuine post sharing your product\'s story or GEO data creates a permanent, AI-citeable brand mention.',
+        effort: 'Low (1-2 hours)',
+        impact: 'Medium — AI-indexable within 1-2 weeks',
+        url: 'https://www.reddit.com/r/SaaS/submit',
+      },
+    ];
+  }
+
   const actions = [];
 
   // Count which domains appear most in competitor citations
@@ -80,17 +113,24 @@ export function generateActions({ targetBrand, gaps, competitorSources, targetSc
     .map(([d]) => d);
 
   // Action 1: Missing platform presence
-  const REVIEW_PLATFORMS = ['g2.com', 'capterra.com', 'trustpilot.com', 'getapp.com', 'producthunt.com'];
-  const missingPlatforms = topCompetitorDomains.filter(d => REVIEW_PLATFORMS.includes(d));
+  const REVIEW_PLATFORMS = [
+    { domain: 'g2.com',         url: 'https://www.g2.com/products/new' },
+    { domain: 'capterra.com',   url: 'https://www.capterra.com/vendors/sign-up' },
+    { domain: 'producthunt.com',url: 'https://www.producthunt.com/posts/new' },
+    { domain: 'trustpilot.com', url: 'https://business.trustpilot.com/signup' },
+    { domain: 'getapp.com',     url: 'https://www.getapp.com/vendor-center/signup' },
+  ];
+  const missingPlatforms = REVIEW_PLATFORMS.filter(p => topCompetitorDomains.includes(p.domain));
   if (missingPlatforms.length > 0) {
+    const names = missingPlatforms.slice(0, 2).map(p => p.domain.replace('.com', '')).join(' and ');
     actions.push({
       priority: 1,
       type: 'platform',
-      title: `Get listed on ${missingPlatforms.slice(0, 2).join(' and ')}`,
-      reason: `These platforms appear in ${missingPlatforms.length === 1 ? 'competitor' : 'multiple competitor'} citations but not yours.`,
+      title: `Get listed on ${names}`,
+      reason: `These platforms appear in competitor citations but not yours. AI engines use them as trust signals — getting listed directly closes the citation gap.`,
       effort: 'Low (1-2 hours)',
       impact: 'High — visible in 2-4 weeks',
-      url: missingPlatforms.includes('g2.com') ? 'https://www.g2.com/products/new' : null,
+      url: missingPlatforms[0].url,
     });
   }
 
@@ -101,32 +141,32 @@ export function generateActions({ targetBrand, gaps, competitorSources, targetSc
       priority: 2,
       type: 'content',
       title: `Create content targeting ${gapQuestionTypes} queries`,
-      reason: `${targetBrand} missed ${gaps.length} queries where competitors appeared. These queries show a content gap.`,
+      reason: `${targetBrand} was absent from ${gaps.length} queries where competitors appeared. Writing a comparison page or blog post targeting these exact queries is the fastest way to close the gap.`,
       effort: 'Medium (2-4 hours)',
       impact: 'Medium-High — visible in 3-6 weeks',
       sampleQuestions: gaps.slice(0, 3).map(g => g.question),
     });
   }
 
-  // Action 3: FAQ + Schema
+  // Action 3: FAQ schema or Reddit
   if (targetScore < 40) {
     actions.push({
       priority: 3,
       type: 'technical',
       title: 'Add FAQPage schema markup to your website',
-      reason: 'Structured FAQ data is one of the strongest signals for AI citation. Your current score suggests this is missing or weak.',
+      reason: 'Structured FAQ data is a direct AI citation signal. Add 5-8 Q&A pairs about your product as JSON-LD — this is one of the fastest technical wins.',
       effort: 'Low (1 hour)',
       impact: 'Medium — visible in 1-2 weeks',
     });
   } else {
-    // If score is decent, suggest expanding schema coverage
     actions.push({
       priority: 3,
       type: 'authority',
-      title: 'Build community presence in relevant Reddit communities',
-      reason: 'Reddit appears frequently in AI citation sources. Authentic participation creates citation-able brand mentions.',
+      title: 'Build presence in relevant Reddit communities',
+      reason: 'Reddit is one of the top AI citation sources. Sharing genuine insights or case studies in r/SaaS, r/SEO, or niche communities creates authoritative, AI-indexable mentions.',
       effort: 'Ongoing (1-2 hours/week)',
       impact: 'Medium — compounds over time',
+      url: 'https://www.reddit.com/r/SaaS/',
     });
   }
 

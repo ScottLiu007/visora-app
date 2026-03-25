@@ -22,6 +22,8 @@ export interface ScanReport {
     citation_density: number
     sentiment: number
     source_quality: number
+    weights?: { appearance_rate: number; citation_density: number; sentiment: number; source_quality: number }
+    stats?: { appearances: number; total_questions: number; total_mentions: number }
   }
   citation_gaps: Array<{
     competitor: string
@@ -33,6 +35,12 @@ export interface ScanReport {
     title: string
     description: string
     impact: string
+    url?: string | null
+  }>
+  scan_questions?: Array<{
+    question: string
+    brand_mentioned: boolean
+    competitors_mentioned: string[]
   }>
   generated_content?: {
     faq?: string
