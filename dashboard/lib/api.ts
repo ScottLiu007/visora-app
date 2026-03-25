@@ -53,9 +53,9 @@ function normalizeError(e: unknown): Error {
 }
 
 // fetch with 15s timeout
-async function fetchWithTimeout(url: string, options?: RequestInit): Promise<Response> {
+async function fetchWithTimeout(url: string, options?: RequestInit, timeoutMs = 15000): Promise<Response> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 15000)
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
     return await fetch(url, { ...options, signal: controller.signal })
   } catch (e) {
@@ -83,11 +83,12 @@ export async function getUserPlan(userId: string, token: string): Promise<{ plan
 
 export async function triggerScan(data: ScanRequest, token: string): Promise<{ scanId: string }> {
   try {
+    // Scan takes ~60s — use 120s timeout
     const res = await fetchWithTimeout(`${API_URL}/api/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
-    })
+    }, 120000)
     if (!res.ok) throw new Error(await res.text())
     return res.json()
   } catch (e) {
