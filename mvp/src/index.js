@@ -7,6 +7,8 @@ import 'dotenv/config';
 import { scanRouter } from '../api/scan.js';
 import { reportRouter } from '../api/report.js';
 import { waitlistRouter } from '../api/waitlist.js';
+import { userRouter } from '../api/user.js';
+import { webhooksRouter } from '../api/webhooks.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,6 +39,8 @@ app.get('/health', (req, res) => {
 app.use('/api/scan', scanRouter);
 app.use('/api/report', reportRouter);
 app.use('/api/waitlist', waitlistRouter);
+app.use('/api/user', userRouter);
+app.use('/api/webhooks', webhooksRouter);
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((req, res) => {

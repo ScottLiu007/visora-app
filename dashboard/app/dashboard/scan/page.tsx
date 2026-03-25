@@ -1,24 +1,46 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { triggerScan } from '@/lib/api'
+import { triggerScan, getUserPlan } from '@/lib/api'
 import { PlusCircle, X, Loader2, Zap, Info } from 'lucide-react'
+import UpgradeWall from '@/components/ui/UpgradeWall'
 
 const CATEGORIES = ['SaaS / Software','E-commerce','Marketing / Agency','Finance / Fintech','Health / Wellness','Developer Tools','Education','AI / ML','Other']
 
 export default function NewScanPage() {
-  const router  = useRouter()
+  const router   = useRouter()
   const supabase = createClient()
-  const [brand, setBrand]           = useState('')
-  const [url, setUrl]               = useState('')
-  const [category, setCategory]     = useState(CATEGORIES[0])
+  const [brand, setBrand]             = useState('')
+  const [url, setUrl]                 = useState('')
+  const [category, setCategory]       = useState(CATEGORIES[0])
   const [competitors, setCompetitors] = useState<string[]>([''])
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState<string | null>(null)
+  const [loading, setLoading]         = useState(false)
+  const [error, setError]             = useState<string | null>(null)
+  const [planStatus, setPlanStatus]   = useState<{ plan: string; scan_credits: number } | null>(null)
+  const [planLoading, setPlanLoading] = useState(true)
 
-  const addCompetitor = () => { if (competitors.length < 5) setCompetitors(c => [...c, '']) }
+  // Check plan on mount
+  useEffect(() => {
+    async function checkPlan() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+        const status = await getUserPlan(session.user.id, session.access_token)
+        setPlanStatus(status)
+      } catch {
+        setPlanStatus({ plan: 'starter', scan_credits: 1 })
+      } finally {
+        setPlanLoading(false)
+      }
+    }
+    checkPlan()
+  }, [])
+
+  const needsUpgrade = planStatus?.plan === 'starter' && (planStatus?.scan_credits ?? 0) <= 0
+
+  const addCompetitor    = () => { if (competitors.length < 5) setCompetitors(c => [...c, '']) }
   const removeCompetitor = (i: number) => setCompetitors(c => c.filter((_, idx) => idx !== i))
   const updateCompetitor = (i: number, v: string) => setCompetitors(c => c.map((x, idx) => idx === i ? v : x))
 
@@ -35,14 +57,43 @@ export default function NewScanPage() {
         session.access_token
       )
       router.push(`/dashboard/report/${scanId}`)
-    } catch (err: any) { setError(err.message || 'Scan failed — is the backend running?'); setLoading(false) }
+    } catch (err: any) {
+      if (err.message?.includes('upgrade_required') || err.message?.includes('402')) {
+        setPlanStatus(s => s ? { ...s, scan_credits: 0 } : { plan: 'starter', scan_credits: 0 })
+      } else {
+        setError(err.message || 'Scan failed — is the backend running?')
+      }
+      setLoading(false)
+    }
   }
+
+  // Loading state
+  if (planLoading) {
+    return (
+      <div className="p-8 flex items-center gap-3 text-[#7a8fa6]">
+        <Loader2 size={16} className="animate-spin" /> Checking your plan…
+      </div>
+    )
+  }
+
+  // Upgrade wall
+  if (needsUpgrade) return <UpgradeWall />
 
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-8 animate-fade-up">
-        <h1 className="font-['Syne'] text-2xl font-bold text-white mb-1">New GEO Scan</h1>
-        <p className="text-sm text-[#7a8fa6]">We'll query AI search engines and measure how often your brand appears.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-['Syne'] text-2xl font-bold text-white mb-1">New GEO Scan</h1>
+            <p className="text-sm text-[#7a8fa6]">We'll query AI search engines and measure how often your brand appears.</p>
+          </div>
+          {planStatus?.plan === 'starter' && (
+            <div className="text-right">
+              <span className="text-xs text-[#7a8fa6]">Free scans left</span>
+              <div className="text-xl font-bold text-cyan-400">{planStatus.scan_credits}</div>
+            </div>
+          )}
+        </div>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6 animate-fade-up delay-100">
         <div>

@@ -43,6 +43,14 @@ export interface ScanReport {
   status: 'pending' | 'running' | 'complete' | 'error'
 }
 
+export async function getUserPlan(userId: string, token: string): Promise<{ plan: string; scan_credits: number }> {
+  const res = await fetch(`${API_URL}/api/user/plan?userId=${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return { plan: 'starter', scan_credits: 1 }
+  return res.json()
+}
+
 export async function triggerScan(data: ScanRequest, token: string): Promise<{ scanId: string }> {
   const res = await fetch(`${API_URL}/api/scan`, {
     method: 'POST',

@@ -82,6 +82,21 @@ scanRouter.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Maximum 5 competitors per scan' });
   }
 
+  // ─── Paywall check ───────────────────────────────────────────────────────────
+  if (userId && process.env.SUPABASE_URL) {
+    const { data: profile } = await supabase.from('profiles').select('plan, scan_credits').eq('id', userId).single();
+    const plan = profile?.plan || 'starter';
+    const credits = profile?.scan_credits ?? 1;
+
+    if (plan === 'starter' && credits <= 0) {
+      return res.status(402).json({
+        error: 'upgrade_required',
+        message: 'You have used your free scan. Upgrade to run more scans.',
+        upgrade_url: 'https://visoraapp.com/#pricing',
+      });
+    }
+  }
+
   // Insert scan record (status: running)
   let scanId;
   let createdAt = new Date().toISOString();
@@ -135,6 +150,14 @@ scanRouter.post('/', async (req, res) => {
         report_json:      report,
         completed_at:     new Date().toISOString(),
       }).eq('id', scanId);
+    }
+
+    // Decrement starter credits after successful scan
+    if (userId && process.env.SUPABASE_URL) {
+      const { data: profile } = await supabase.from('profiles').select('plan, scan_credits').eq('id', userId).single();
+      if (profile?.plan === 'starter' && (profile?.scan_credits ?? 0) > 0) {
+        await supabase.from('profiles').update({ scan_credits: profile.scan_credits - 1 }).eq('id', userId);
+      }
     }
 
     // ✅ Return scanId — frontend navigates to /dashboard/report/:scanId
