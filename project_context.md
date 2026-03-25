@@ -120,6 +120,8 @@ visora/
 - **scan.js**：存入 `scan_questions`、`score weights`、`stats` 到 `report_json` ✅
 - **修复 VPS pm2 路径问题**：git pull 导致代码嵌套到 `/opt/visora/mvp/mvp/`，重新指向 pm2 并更新 deploy.sh ✅
 - **api.visoraapp.com/health 验证**：`{"status":"ok"}` ✅
+- **llms.txt 自动生成**：每次扫描自动生成用户专属 llms.txt，存入 `report_json.generated_content.llms_txt`，报告页 CodeBlock 展示 ✅
+- **竞品引用来源归因**：`competitor_sources` 存入 report_json，报告页新增「Why AI Cites Your Competitors」柱状图模块 ✅
 
 ### ✅ 阶段九 — Bug 修复 + 完整流程验证（Session 11）
 - **修复 Bug 1**：`lib/api.ts` 所有接口加 `fetchWithTimeout(15s)` + `normalizeError()`，错误提示友好化 ✅
@@ -154,6 +156,13 @@ ALLOWED_ORIGIN=https://dashboard.visoraapp.com,https://visora-app-git-main-scott
 ### 🐛 已发现 Bug（Session 10 真实用户流程测试）
 - [x] **Dashboard 新用户 "Failed to fetch"**：已修复 → 友好错误提示 + ⚠ 图标 + retry 按钮。
 - [x] **扫描页 plan 检查 "Failed to fetch"**：已修复 → silent fallback + 友好提示。
+
+### ✅ Session 12 端到端测试通过
+- 登录 → 扫描页（credits=5）→ 填表 → 扫描（~95s）→ 报告页全流程 ✅
+- Priority Actions：3 条 GTM 专属行动（G2 / PH / Reddit）+ Do it now 链接 ✅
+- How We Scored You：4 维权重分解 + "0 of 10 AI queries" 统计 ✅
+- Queries Asked to AI：10 条 prompt 全部 Missed（Visora 尚不可见）✅
+- Generated Content：llms.txt 展开 + Copy 按钮 ✅
 
 ### GTM
 - [ ] Reddit 首帖 r/SEO（草稿在 `gtm/reddit-posts.md`）

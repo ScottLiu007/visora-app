@@ -15,6 +15,7 @@ export default function NewScanPage() {
   const [brand, setBrand]             = useState('')
   const [url, setUrl]                 = useState('')
   const [category, setCategory]       = useState(CATEGORIES[0])
+  const [keywords, setKeywords]       = useState('')
   const [competitors, setCompetitors] = useState<string[]>([''])
   const [loading, setLoading]         = useState(false)
   const [error, setError]             = useState<string | null>(null)
@@ -53,7 +54,7 @@ export default function NewScanPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
       const { scanId } = await triggerScan(
-        { targetBrand: brand.trim(), websiteUrl: url.trim(), category, competitors: valid, userId: session.user.id, questionLimit: 10 },
+        { targetBrand: brand.trim(), websiteUrl: url.trim(), category, keywords: keywords.trim() || undefined, competitors: valid, userId: session.user.id, questionLimit: 10 },
         session.access_token
       )
       router.push(`/dashboard/report/${scanId}`)
@@ -112,6 +113,16 @@ export default function NewScanPage() {
             className="w-full bg-[#0a1120] border border-[rgba(34,211,238,0.12)] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/20 transition-all appearance-none cursor-pointer">
             {CATEGORIES.map(c => <option key={c} value={c} className="bg-[#0a1120]">{c}</option>)}
           </select>
+        </div>
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <label className="text-xs font-semibold uppercase tracking-widest text-[#7a8fa6]">Product Keywords</label>
+            <span className="text-[10px] text-[#3d5166] bg-[#0f1b30] px-1.5 py-0.5 rounded-md">Optional</span>
+          </div>
+          <input value={keywords} onChange={e => setKeywords(e.target.value)}
+            placeholder="e.g. GEO optimization, AI visibility, SEO tool"
+            className="w-full bg-[#0a1120] border border-[rgba(34,211,238,0.12)] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#3d5166] focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/20 transition-all"/>
+          <p className="text-[10px] text-[#3d5166] mt-1.5">Describe what your product does — used to generate specific AI queries (e.g. "GEO optimization tool" instead of "SaaS / Software")</p>
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">

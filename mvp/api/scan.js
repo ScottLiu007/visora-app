@@ -79,6 +79,7 @@ function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, co
     target_brand:  targetBrand,
     website_url:   websiteUrl,
     category,
+    keywords:      keywords || null,
     competitors,
     score:            scoreData.score,
     score_breakdown,
@@ -97,7 +98,7 @@ function buildScanReport({ scanId, userId, targetBrand, websiteUrl, category, co
 
 // ─── POST /api/scan ───────────────────────────────────────────────────────────
 scanRouter.post('/', async (req, res) => {
-  const { targetBrand, websiteUrl, category, competitors = [], questionLimit = 10, userId } = req.body;
+  const { targetBrand, websiteUrl, category, keywords, competitors = [], questionLimit = 10, userId } = req.body;
 
   if (!targetBrand || !category) {
     return res.status(400).json({ error: 'targetBrand and category are required' });
@@ -143,7 +144,7 @@ scanRouter.post('/', async (req, res) => {
     console.log(`\n▶ Scan started: ${targetBrand} | ${category}`);
 
     const rawReport = await scanBrand({
-      targetBrand, websiteUrl, category, competitors,
+      targetBrand, websiteUrl, category, keywords, competitors,
       questionLimit: Math.min(questionLimit, 50),
     });
 

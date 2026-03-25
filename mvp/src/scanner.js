@@ -25,31 +25,57 @@ const client = new OpenAI({
 const MODEL = USE_OPENROUTER ? 'perplexity/sonar' : 'sonar';
 
 // ─── Question Templates ──────────────────────────────────────────────────────
-// These are dynamically generated based on category + brand
-function buildQuestions(category, targetBrand, competitors) {
+// Uses `keywords` (user-provided product descriptor) when available,
+// falls back to `category` (UI dropdown) for generic phrasing.
+// This ensures questions like "best GEO optimization tools" instead of
+// the too-broad "best SaaS / Software tools".
+function buildQuestions(category, targetBrand, competitors, keywords) {
   const allBrands = [targetBrand, ...competitors];
-  return [
-    `What are the best ${category} tools for small businesses?`,
-    `What ${category} software do indie hackers recommend?`,
-    `Best ${category} tools in 2026?`,
-    `What ${category} tool should I use for my startup?`,
-    `How do I choose a ${category} tool?`,
-    `What are the top ${category} platforms?`,
-    `Free ${category} tools worth trying?`,
-    `${category} tools comparison 2026`,
-    `Most popular ${category} software for teams?`,
-    `Which ${category} tool has the best free plan?`,
-    // Brand-specific
+
+  // Use first keyword as primary search term, fallback to category
+  const primaryTerm = keywords
+    ? keywords.split(',')[0].trim()
+    : category;
+
+  // Use all keywords for variety, fallback to category
+  const terms = keywords
+    ? keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 3)
+    : [category];
+
+  // Brand-specific questions always use the brand name directly
+  const brandQuestions = [
     ...allBrands.slice(0, 3).map(b => `${b} alternatives`),
     ...allBrands.slice(0, 2).map(b => `Is ${b} worth it?`),
-    `Best ${category} tools for SaaS companies`,
-    `${category} tools for developers`,
-    `${category} software with API access`,
-    `Affordable ${category} tools`,
-    `${category} tools under $50 per month`,
-    `Enterprise ${category} software`,
-    `Open source ${category} tools`,
   ];
+
+  // Category/keyword questions — use primaryTerm for most, rotate through terms
+  const categoryQuestions = [
+    `What are the best ${primaryTerm} tools for small businesses?`,
+    `What ${primaryTerm} software do indie hackers recommend?`,
+    `Best ${primaryTerm} tools in 2026?`,
+    `What ${primaryTerm} tool should I use for my startup?`,
+    `How do I choose a ${primaryTerm} tool?`,
+    `What are the top ${primaryTerm} platforms?`,
+    `Free ${primaryTerm} tools worth trying?`,
+    `${primaryTerm} tools comparison 2026`,
+    `Most popular ${primaryTerm} software for teams?`,
+    `Which ${primaryTerm} tool has the best free plan?`,
+    `Best ${primaryTerm} tools for SaaS companies`,
+    `${primaryTerm} tools for developers`,
+    `${primaryTerm} software with API access`,
+    `Affordable ${primaryTerm} tools`,
+    `${primaryTerm} tools under $50 per month`,
+    // If multiple keywords, add variety
+    ...(terms.length > 1 ? [
+      `Best ${terms[1]} tools 2026?`,
+      `${terms[1]} software recommendations`,
+    ] : []),
+    ...(terms.length > 2 ? [
+      `What is the best ${terms[2]} platform?`,
+    ] : []),
+  ];
+
+  return [...categoryQuestions, ...brandQuestions];
 }
 
 // ─── Core Scanner ────────────────────────────────────────────────────────────
@@ -57,10 +83,11 @@ export async function scanBrand({
   targetBrand,
   websiteUrl,
   category,
+  keywords,
   competitors = [],
   questionLimit = 10, // use 50 in production
 }) {
-  const questions = buildQuestions(category, targetBrand, competitors)
+  const questions = buildQuestions(category, targetBrand, competitors, keywords)
     .slice(0, questionLimit);
 
   const allBrands = [targetBrand, ...competitors];

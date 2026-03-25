@@ -4,6 +4,7 @@ export interface ScanRequest {
   targetBrand: string
   websiteUrl: string
   category: string
+  keywords?: string
   competitors: string[]
   questionLimit?: number
   userId?: string

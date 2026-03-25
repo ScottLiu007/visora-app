@@ -43,6 +43,8 @@
 - [x] 报告页「Queries Asked to AI」—— 所有 prompt + ✅/❌ 品牌提及状态
 - [x] Action Items 低分专属路径（G2 / PH / Reddit 带直链）
 - [x] VPS pm2 路径修复，deploy.sh 更新
+- [x] llms.txt 自动生成（模板引擎，无 API 调用，每次扫描即生成）
+- [x] 竞品引用来源归因「Why AI Cites Your Competitors」柱状图模块
 
 ---
 
