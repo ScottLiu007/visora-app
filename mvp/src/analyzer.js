@@ -65,7 +65,7 @@ export function attributeSources({ competitors, results }) {
 // ─── Action Recommendations ───────────────────────────────────────────────────
 // Generate 3 concrete, prioritized actions based on gap analysis
 export function generateActions({ targetBrand, gaps, competitorSources, targetScore }) {
-  // Brand is completely invisible — return specific GTM-first actions with direct URLs
+  // Brand is completely invisible — return full GTM-first action set
   if (targetScore < 10) {
     return [
       {
@@ -88,12 +88,47 @@ export function generateActions({ targetBrand, gaps, competitorSources, targetSc
       },
       {
         priority: 3,
+        type: 'entity',
+        title: `Create a Wikidata entity for ${targetBrand}`,
+        reason: 'Wikidata is part of the Google Knowledge Graph. When AI models have a structured entity entry for your brand, they can confidently cite you by name. Takes 20 minutes.',
+        effort: 'Low (20 min)',
+        impact: 'Medium — improves entity recognition in AI within weeks',
+        url: 'https://www.wikidata.org/wiki/Special:NewItem',
+      },
+      {
+        priority: 4,
+        type: 'directory',
+        title: `Submit ${targetBrand} to Futurepedia and AI directories`,
+        reason: 'AI tool directories like Futurepedia and There\'s An AI For That are frequently cited by Perplexity when users ask about AI-adjacent tools. Free to submit, takes 30 minutes.',
+        effort: 'Low (30 min)',
+        impact: 'Medium — AI-indexable within 1-2 weeks',
+        url: 'https://www.futurepedia.io/submit-tool',
+      },
+      {
+        priority: 5,
         type: 'community',
         title: `Post about ${targetBrand} in r/SaaS or r/SEO`,
         reason: 'Reddit is one of the top citation sources for AI search engines. A genuine post sharing your product\'s story or GEO data creates a permanent, AI-citeable brand mention.',
         effort: 'Low (1-2 hours)',
         impact: 'Medium — AI-indexable within 1-2 weeks',
         url: 'https://www.reddit.com/r/SaaS/submit',
+      },
+      {
+        priority: 6,
+        type: 'social',
+        title: `Share ${targetBrand}'s GEO data insights on LinkedIn`,
+        reason: 'LinkedIn is heavily indexed by Perplexity and other AI search engines. A post sharing original data about AI visibility in your niche builds brand authority and citation probability.',
+        effort: 'Low (1 hour)',
+        impact: 'Medium — AI-indexable within days',
+        url: 'https://www.linkedin.com/feed/',
+      },
+      {
+        priority: 7,
+        type: 'content',
+        title: `Create a comparison page: ${targetBrand} vs competitors`,
+        reason: 'Comparison pages are among the highest-cited content types by AI search engines. A well-structured "vs" page targeting your category creates a permanent AI-citation asset.',
+        effort: 'Medium (2-3 hours)',
+        impact: 'High — AI-indexable within 2-4 weeks',
       },
     ];
   }
