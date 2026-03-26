@@ -48,7 +48,7 @@ const platformColor: Record<Platform, string> = {
   generic:     'text-cyan-400 border-cyan-400/30 hover:bg-cyan-400/10',
 }
 
-const platformInstructions: Record<Platform, string> = {
+const platformInstructions: Record<Platform, string | ((...args: string[]) => string)> = {
   reddit: `Generate a Reddit post. Return ONLY valid JSON: {"subreddit": "SaaS", "title": "...", "body": "..."}
 - Title: 60-80 chars, no clickbait, no all-caps
 - Body: 3-4 short paragraphs, casual tone, ends with a question to invite discussion
@@ -79,25 +79,32 @@ const platformInstructions: Record<Platform, string> = {
 - description: 100-150 words, what problem it solves, key features, who it's for
 - tags: 5-7 relevant category tags (e.g. "GEO", "AI Visibility", "SEO Tools", "SaaS")`,
 
-  comparison: `Generate a comparison page outline for this brand vs its main competitor. Return ONLY valid JSON: {"title": "...", "intro": "...", "table": "...", "verdict": "..."}
-- title: "[Brand] vs [Competitor]: Which GEO tool is right for you?" style
-- intro: 50-80 words setting up the comparison
-- table: markdown table with 4-5 key dimensions (pricing, features, ease of use, target user)
+  comparison: (competitor: string) => `Generate a comparison page outline for this brand vs ${competitor}. Return ONLY valid JSON: {"title": "...", "intro": "...", "table": "...", "verdict": "..."}
+- title: "[Brand] vs ${competitor}: Which GEO tool is right for you?" style
+- intro: 50-80 words setting up the comparison — focus on GEO / AI visibility differences
+- table: markdown table with 4-5 key dimensions (pricing, AI model coverage, ease of use, target user, key differentiator)
 - verdict: 40-60 words, who should pick which tool`,
 
   generic: `Generate a short action summary the user can copy. Return ONLY valid JSON: {"content": "..."}
 - 50-100 words max, practical and specific`,
 }
 
-async function generateContent(action: ActionItem, report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category'>, platform: Platform): Promise<string> {
+async function generateContent(action: ActionItem, report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors'>, platform: Platform): Promise<string> {
   const systemPrompt = `You generate short, authentic platform-specific content to help SaaS founders improve their AI search visibility (GEO). Write in a natural, human tone. Never use corporate speak.`
+
+  const mainCompetitor = report.competitors?.[0] || 'its main competitor'
+  const comparisonInstruction = typeof platformInstructions.comparison === 'function'
+    ? platformInstructions.comparison(mainCompetitor)
+    : platformInstructions.comparison
+
   const userPrompt = `Brand: ${report.target_brand}
 Website: ${report.website_url}
 Category: ${report.category}
+Competitors: ${(report.competitors || []).join(', ')}
 Action to execute: ${action.title}
 Context: ${action.description}
 
-${platformInstructions[platform]}`
+${platform === 'comparison' ? comparisonInstruction : platformInstructions[platform]}`
 
   const res = await fetch('/api/anthropic/generate', {
     method: 'POST',
@@ -191,7 +198,7 @@ function SingleAction({ action, index, reportId, report }: {
   action: ActionItem
   index: number
   reportId: string
-  report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category'>
+  report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors'>
 }) {
   const storageKey = `completed_${reportId}`
   const [done, setDone] = useState(() => {
@@ -277,7 +284,7 @@ function SingleAction({ action, index, reportId, report }: {
 export default function PriorityActions({ actions, reportId, report }: {
   actions: ScanReport['action_items']
   reportId: string
-  report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category'>
+  report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors'>
 }) {
   if (!actions.length) return null
   return (
