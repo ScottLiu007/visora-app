@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { triggerScan, getUserPlan } from '@/lib/api'
-import { PlusCircle, X, Loader2, Zap, Info } from 'lucide-react'
+import { PlusCircle, X, Loader2, Zap, Info, Sparkles } from 'lucide-react'
 import UpgradeWall from '@/components/ui/UpgradeWall'
 
 const CATEGORIES = ['SaaS / Software','E-commerce','Marketing / Agency','Finance / Fintech','Health / Wellness','Developer Tools','Education','AI / ML','Other']
@@ -22,7 +22,6 @@ export default function NewScanPage() {
   const [planStatus, setPlanStatus]   = useState<{ plan: string; scan_credits: number } | null>(null)
   const [planLoading, setPlanLoading] = useState(true)
 
-  // Check plan on mount
   useEffect(() => {
     async function checkPlan() {
       try {
@@ -68,7 +67,6 @@ export default function NewScanPage() {
     }
   }
 
-  // Loading state
   if (planLoading) {
     return (
       <div className="p-8 flex items-center gap-3 text-[#7a8fa6]">
@@ -77,7 +75,6 @@ export default function NewScanPage() {
     )
   }
 
-  // Upgrade wall
   if (needsUpgrade) return <UpgradeWall />
 
   return (
@@ -114,16 +111,24 @@ export default function NewScanPage() {
             {CATEGORIES.map(c => <option key={c} value={c} className="bg-[#0a1120]">{c}</option>)}
           </select>
         </div>
+
+        {/* P0: Product Keywords — 强引导版本 */}
         <div>
           <div className="flex items-center gap-2 mb-2">
             <label className="text-xs font-semibold uppercase tracking-widest text-[#7a8fa6]">Product Keywords</label>
-            <span className="text-[10px] text-[#3d5166] bg-[#0f1b30] px-1.5 py-0.5 rounded-md">Optional</span>
+            <span className="text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded-md">Recommended</span>
           </div>
           <input value={keywords} onChange={e => setKeywords(e.target.value)}
-            placeholder="e.g. GEO optimization, AI visibility, SEO tool"
+            placeholder="e.g. GEO optimization tool, AI visibility tracker, SEO alternative"
             className="w-full bg-[#0a1120] border border-[rgba(34,211,238,0.12)] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#3d5166] focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/20 transition-all"/>
-          <p className="text-[10px] text-[#3d5166] mt-1.5">Describe what your product does — used to generate specific AI queries (e.g. "GEO optimization tool" instead of "SaaS / Software")</p>
+          <div className="flex items-start gap-2 mt-2 bg-amber-400/5 border border-amber-400/10 rounded-lg px-3 py-2.5">
+            <Sparkles size={12} className="text-amber-400 mt-0.5 flex-shrink-0"/>
+            <p className="text-[11px] text-amber-400/80 leading-relaxed">
+              Specific keywords → more relevant AI queries → more accurate score. Without this, we use your category as a fallback.
+            </p>
+          </div>
         </div>
+
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold uppercase tracking-widest text-[#7a8fa6]">Competitors <span className="text-[#3d5166] normal-case tracking-normal font-normal">(up to 5)</span></label>
