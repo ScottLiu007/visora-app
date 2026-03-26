@@ -261,7 +261,16 @@ export default function ReportPage() {
         <PriorityActions
           actions={report.action_items}
           reportId={params.id}
-          report={{ target_brand: report.target_brand, website_url: report.website_url, category: report.category, competitors: report.competitors }}
+          report={{
+            target_brand: report.target_brand,
+            website_url: report.website_url,
+            category: report.category,
+            competitors: report.competitors,
+            score: report.score,
+            score_breakdown: report.score_breakdown,
+            scan_questions: report.scan_questions,
+            citation_gaps: report.citation_gaps,
+          }}
         />
       </div>
 

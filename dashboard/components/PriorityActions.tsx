@@ -89,7 +89,7 @@ const platformInstructions: Record<Platform, string | ((...args: string[]) => st
 - 50-100 words max, practical and specific`,
 }
 
-async function generateContent(action: ActionItem, report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors'>, platform: Platform): Promise<string> {
+async function generateContent(action: ActionItem, report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors' | 'score' | 'score_breakdown' | 'scan_questions' | 'citation_gaps'>, platform: Platform): Promise<string> {
   const systemPrompt = `You generate short, authentic platform-specific content to help SaaS founders improve their AI search visibility (GEO). Write in a natural, human tone. Never use corporate speak.`
 
   const mainCompetitor = report.competitors?.[0] || 'its main competitor'
@@ -97,12 +97,35 @@ async function generateContent(action: ActionItem, report: Pick<ScanReport, 'tar
     ? platformInstructions.comparison(mainCompetitor)
     : platformInstructions.comparison
 
+  // Build rich scan context from real data
+  const missedQueries = (report.scan_questions || []).filter(q => !q.brand_mentioned)
+  const citedQueries  = (report.scan_questions || []).filter(q => q.brand_mentioned)
+  const competitorCitations = (report.scan_questions || [])
+    .flatMap(q => q.competitors_mentioned)
+    .reduce<Record<string, number>>((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc }, {})
+
+  const scanContext = `
+GEO Scan Results:
+- Overall score: ${report.score}/100
+- Appeared in AI answers: ${citedQueries.length} of ${(report.scan_questions || []).length} queries
+- Appearance rate: ${report.score_breakdown?.appearance_rate ?? 0}/100
+- Sentiment score: ${report.score_breakdown?.sentiment ?? 0}/100
+- Competitors cited by AI: ${Object.entries(competitorCitations).map(([c, n]) => `${c} (${n}x)`).join(', ') || 'none detected'}
+${report.citation_gaps?.length ? `- Citation gaps vs competitors: ${report.citation_gaps.map(g => `${g.competitor} leads by ${Math.round(g.gap_score * 100)} pts`).join(', ')}` : ''}
+${missedQueries.length ? `- Example queries where brand was NOT cited: "${missedQueries[0]?.question}"` : ''}
+`.trim()
+
   const userPrompt = `Brand: ${report.target_brand}
 Website: ${report.website_url}
 Category: ${report.category}
 Competitors: ${(report.competitors || []).join(', ')}
+
+${scanContext}
+
 Action to execute: ${action.title}
 Context: ${action.description}
+
+Use the real scan data above to make the content specific and data-driven — mention actual scores, competitor names, and concrete gaps where relevant.
 
 ${platform === 'comparison' ? comparisonInstruction : platformInstructions[platform]}`
 
@@ -198,8 +221,7 @@ function SingleAction({ action, index, reportId, report }: {
   action: ActionItem
   index: number
   reportId: string
-  report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors'>
-}) {
+  report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors' | 'score' | 'score_breakdown' | 'scan_questions' | 'citation_gaps'>}) {
   const storageKey = `completed_${reportId}`
   const [done, setDone] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -284,8 +306,7 @@ function SingleAction({ action, index, reportId, report }: {
 export default function PriorityActions({ actions, reportId, report }: {
   actions: ScanReport['action_items']
   reportId: string
-  report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors'>
-}) {
+  report: Pick<ScanReport, 'target_brand' | 'website_url' | 'category' | 'competitors' | 'score' | 'score_breakdown' | 'scan_questions' | 'citation_gaps'>}) {
   if (!actions.length) return null
   return (
     <div className="space-y-3">
