@@ -32,14 +32,18 @@ const MODEL = USE_OPENROUTER ? 'perplexity/sonar' : 'sonar';
 function buildQuestions(category, targetBrand, competitors, keywords) {
   const allBrands = [targetBrand, ...competitors];
 
+  // Strip trailing generic suffixes to avoid "GEO optimization tool tools"
+  const stripSuffix = (str) =>
+    str.replace(/\s+(tools?|software|platform|platforms|app|apps|solution|solutions)$/i, '').trim();
+
   // Use first keyword as primary search term, fallback to category
   const primaryTerm = keywords
-    ? keywords.split(',')[0].trim()
+    ? stripSuffix(keywords.split(',')[0].trim())
     : category;
 
   // Use all keywords for variety, fallback to category
   const terms = keywords
-    ? keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 3)
+    ? keywords.split(',').map(k => stripSuffix(k.trim())).filter(Boolean).slice(0, 3)
     : [category];
 
   // Brand-specific questions always use the brand name directly
