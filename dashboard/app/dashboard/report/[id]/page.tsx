@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase'
 import { getReport, getUserReports, createShareLink, scoreColor, scoreLabel, type ScanReport } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import { ArrowLeft, ExternalLink, AlertTriangle, TrendingUp, Loader2, RefreshCw, Copy, Check, ChevronDown, ChevronUp, Zap, Shield, Flame, CheckCircle2, XCircle, Info, Link2, Sparkles } from 'lucide-react'
+import PriorityActions from '@/components/PriorityActions'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
 
 // ── Score Ring ───────────────────────────────────────────────────────────────
@@ -100,11 +101,7 @@ function Sk({ className = '' }: { className?: string }) {
   return <div className={`skeleton rounded-xl ${className}`}/>
 }
 
-const priorityConfig = {
-  high:   { color: 'text-rose-400',    bg: 'bg-rose-400/10 border-rose-400/20',       icon: Flame },
-  medium: { color: 'text-amber-400',   bg: 'bg-amber-400/10 border-amber-400/20',     icon: AlertTriangle },
-  low:    { color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/20', icon: Shield },
-}
+
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ReportPage() {
@@ -256,42 +253,16 @@ export default function ReportPage() {
         </div>
       </div>
 
-      {/* Action Items */}
+      {/* Action Items — P1 one-click execute + P2 completion state */}
       <div className="animate-fade-up delay-200">
         <h2 className="font-['Syne'] text-base font-bold text-white mb-4 flex items-center gap-2">
           <TrendingUp size={16} className="text-cyan-400"/> Priority Actions
         </h2>
-        <div className="space-y-3">
-          {report.action_items.map((action, i) => {
-            const cfg = priorityConfig[action.priority]
-            const Icon = cfg.icon
-            return (
-              <div key={i} className="bg-[#0a1120] border border-[rgba(34,211,238,0.08)] hover:border-cyan-400/15 rounded-2xl p-5 transition-all">
-                <div className="flex items-start gap-4">
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-xl border flex items-center justify-center ${cfg.bg}`}>
-                    <Icon size={13} className={cfg.color}/>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-semibold text-white">{action.title}</p>
-                      <span className={`text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md border ${cfg.bg} ${cfg.color}`}>{action.priority}</span>
-                    </div>
-                    <p className="text-sm text-[#7a8fa6] leading-relaxed">{action.description}</p>
-                    <div className="flex items-center gap-3 mt-2">
-                      {action.impact && <p className="text-xs text-cyan-400 flex items-center gap-1"><Zap size={10}/>{action.impact}</p>}
-                      {action.url && (
-                        <a href={action.url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 underline underline-offset-2 transition-colors">
-                          Do it now <ExternalLink size={10}/>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <PriorityActions
+          actions={report.action_items}
+          reportId={params.id}
+          report={{ target_brand: report.target_brand, website_url: report.website_url, category: report.category }}
+        />
       </div>
 
       {/* Score Breakdown — How we scored you */}

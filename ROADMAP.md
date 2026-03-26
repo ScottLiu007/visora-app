@@ -1,5 +1,5 @@
 # Visora Roadmap
-> visoraapp.com · 更新：2026-03-25（Session 15）
+> visoraapp.com · 更新：2026-03-25（Session 16 · PH Launch Gallery 真实截图已保存）
 
 ---
 
@@ -8,6 +8,17 @@
 **先让 Visora 自己被 AI 推荐，再卖帮别人被 AI 推荐的工具。**
 
 产品开发和市场推广同步进行。用 Visora 自己做 GEO 的过程，既验证产品逻辑，又积累第一批用户。
+
+### 产品核心定位（Session 16 确认）
+
+用户为**效果**付费，不是为报告或教育付费。Visora 的目标是：
+
+> 用户贴网址 → Visora 生成所有内容 → 用户一键提交 → GEO 就做好了
+
+三个阶段执行路径：
+1. **GTM 先行**：Visora 自己先把 G2 / PH / Reddit 做完，分数从 8 涨上去，截图当营销素材
+2. **产品改造**：P0 修 Query 引导 → P1 一键执行 Actions（生成内容 + URL 预填）→ P2 状态记忆
+3. **Landing 改造**：首页加"输入网址免费测"入口，支持匿名扫描
 
 ---
 
@@ -59,12 +70,14 @@
 
 ---
 
-## 🔜 近期（GTM 优先）
+## 🔜 第一阶段：GTM 先行（本周，不写代码）
 
-### 第三方平台收录（直接影响 GEO 分数，也验证产品本身）
-- [ ] **G2** — https://www.g2.com/products/new
-- [ ] **Capterra** — https://www.capterra.com/vendors/sign-up
-- [ ] **Product Hunt Coming Soon** — 账号 scott_liu3（liutao0518@qq.com）
+> 目标：让 Visora 自己的 GEO 分数从 8 涨上去，产出"分数对比截图"作为营销素材
+
+### 第三方平台收录（直接影响 GEO 分数）
+- [x] **G2** — 已批准 listing（2026-03-25）
+- [x] **Capterra** — Gartner Digital Markets 已提交 + 邮箱已验证（2026-03-25）；入口：`https://digitalmarkets.gartner.com/get-listed/start`（旧 `/vendors/sign-up` 已 404）
+- [x] **Product Hunt** — launch 已创建，排期 **2026-04-01 PT**；**Gallery** 已上传 3 张报告页截图并保存（`assets/image1.png`～`image3.png`，2026-03-25）· `https://www.producthunt.com/products/visora?launch=visora` · Pre-Launch：`https://www.producthunt.com/products/visora/visora/prelaunch` · 编辑：`https://www.producthunt.com/posts/visora/edit`
 - [ ] Trustpilot / AlternativeTo / dev.to
 
 ### Reddit 首帖（最快获取第一批用户）
@@ -79,9 +92,34 @@
 
 ---
 
-## 📋 产品迭代队列
+## 🔧 第二阶段：产品核心改造（本周 + 下周）
 
-优先级从高到低：
+### P0 — Query 引导修复（半天）
+- [ ] Product Keywords 字段改为强推荐填写
+- [ ] 加 placeholder 示例：`e.g. GEO optimization tool, AI visibility for SaaS`
+- [ ] 字段下方加提示：`Specific keywords = more relevant AI queries = accurate score`
+
+### P1 — 一键执行 Actions（2-3天，核心功能）
+- [ ] 每个 Priority Action 生成对应内容（Reddit 帖子、G2 文案、PH tagline）
+- [ ] 按钮点击 → 新标签页打开目标平台 + URL 参数预填内容
+- [ ] Reddit 实现：`reddit.com/r/SaaS/submit?title=xxx&text=xxx`
+- [ ] 用户只需登录 → 点发送
+
+### P2 — Action 完成状态记忆（半天）
+- [ ] 每个 Action 加复选框，勾选后持久化
+- [ ] 已完成 Action 折叠/灰掉，不再重复推
+
+---
+
+## 🏠 第三阶段：Landing Page 改造（下下周）
+
+- [ ] 首页加"输入你的网址，免费测一次"入口
+- [ ] 支持匿名扫描（不用注册）
+- [ ] 预览报告看完 → 注册解锁完整版
+
+---
+
+## 📋 产品迭代队列
 
 | 功能 | 说明 | 状态 | 影响 |
 |------|------|------|------|
@@ -90,9 +128,13 @@
 | ~~定时扫描 cron~~ | Growth + `weekly_scan_config` + `CRON_SECRET` | ✅ | 核心卖点 |
 | ~~报告分享链接~~ | `share_token` + 公开 API + `/share` 页 | ✅ | 传播 |
 | ~~Citation 机会~~ | Perplexity 一次调用，结构化机会列表 | ✅ | 差异化 |
-| 报告导出 PDF | 一键导出，方便分享给团队 | 中期 | 传播 |
-| FAQ 内容生成 | 基于扫描结果自动生成 FAQ 文案 | 中期 | 差异化 |
-| Schema 代码生成 | 一键生成 FAQPage schema markup | 中期 | 差异化 |
+| **Query 引导修复** | Keywords 字段强引导，placeholder + 提示文案 | P0 本周 | 体验 |
+| **一键执行 Actions** | 生成内容 + URL 预填，用户只需点提交 | P1 本周 | 核心价值 |
+| **Action 状态记忆** | 完成后打勾，不再重复推 | P2 本周 | 留存 |
+| **Landing 匿名扫描** | 首页输入网址直接测，不用注册 | 第三阶段 | 转化 |
+| 报告导出 PDF | 一键导出，方便分享给团队 | 远期 | 传播 |
+| FAQ 内容生成 | 基于扫描结果自动生成 FAQ 文案 | 远期 | 差异化 |
+| Schema 代码生成 | 一键生成 FAQPage schema markup | 远期 | 差异化 |
 | 多模型覆盖 | Claude / Gemini / Perplexity 分别测，对比可见性 | 远期 | 核心竞争力 |
 
 ---
