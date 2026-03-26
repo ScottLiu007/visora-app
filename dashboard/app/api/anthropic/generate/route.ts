@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || ''
-const MODEL = 'google/gemini-flash-1.5'
+const MODEL = 'google/gemini-2.0-flash-001'
 
 export async function POST(req: NextRequest) {
   try {
