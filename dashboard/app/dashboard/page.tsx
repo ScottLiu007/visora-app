@@ -104,9 +104,13 @@ export default function DashboardPage() {
   async function load() {
     setLoading(true); setError(null)
     try {
+      // getUser() forces token refresh if needed; getSession() alone can return null
+      // on first hydration when session is stored in cookie but not yet in memory
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      const data = await getUserReports(session.user.id, session.access_token)
+      const data = await getUserReports(user.id, session.access_token)
       setScans(data)
     } catch (e: any) { setError(e.message) }
     finally { setLoading(false) }
